@@ -26,7 +26,7 @@ DOMAIN_REGEX = re.compile(
 )
 
 # белые списки, чтобы не заблокировать себе важную хуйню
-WHITELIST = {"localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru"}
+WHITELIST = {"localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru", "cloud.mail.ru"}
 
 
 def fetch_domains():
