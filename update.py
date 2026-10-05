@@ -20,71 +20,59 @@ URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.xiaomi-onlydomains.txt",
 ]
 
-# регулярка для вытаскивания доменов из всякого мусора
-DOMAIN_REGEX = re.compile(
-    r"^(?:0\.0\.0\.0|127\.0\.0\.1)\s+([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z0-9][-a-zA-Z0-9.]+)$"
-)
-
-# белые списки, чтобы не заблокировать себе важную хуйню
 WHITELIST = {"localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru", "cloud.mail.ru"}
 
+def parse_line(line_str):
+    line_str = line_str.strip()
+    if not line_str or line_str.startswith("!") or line_str.startswith("#"):
+        return None
+        
+    line_str = line_str.lstrip("|").rstrip("^")
+    if "$" in line_str:
+        line_str = line_str.split("$")[0]
+        
+    parts = line_str.split()
+    if not parts:
+        return None
+        
+    if parts[0] in ("0.0.0.0", "127.0.0.1") and len(parts) > 1:
+        domain = parts[1]
+    else:
+        domain = parts[0]
+        
+    domain = domain.lower().strip()
+    
+    if domain and domain not in WHITELIST and "." in domain and len(domain) < 253 and " " not in domain:
+        return domain
+    return None
 
 def fetch_domains():
-  domains = set()
-  for url in URLS:
-    print(
-        f"качаем порцию говна с: {url}"
-    )  # без капса, чисто рабочая атмосфера
-    try:
-      req = urllib.request.Request(
-          url, headers={"User-Agent": "Mozilla/5.0"}
-      )
-      with urllib.request.urlopen(req, timeout=30) as response:
-        for line in response:
-          line_str = line.decode("utf-8", errors="ignore").strip()
+    domains = set()
+    for url in URLS:
+        print(f"качаем базу с: {url}")
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=30) as response:
+                for line in response:
+                    clean_domain = parse_line(line.decode("utf-8", errors="ignore"))
+                    if clean_domain:
+                        domains.add(clean_domain)
+        except Exception as e:
+            print(f"ошибка при скачивании {url}: {e}")
 
-          # пропускаем комменты и пустые строки
-          if not line_str or line_str.startswith("!") or line_str.startswith("#"):
-            continue
-            
-          line_str = line_str.lstrip("|").rstrip("^")
-          if "$" in line_str:
-           line_str = line_str.split("$")[0]
-          # если это формат hosts
-          match = DOMAIN_REGEX.match(line_str)
-          if match:
-            domain = match.group(1).lower()
-          else:
-            # если это чистый домен (как в oisd)
-            domain = line_str.lower().split()[0]
-
-          if (
-              domain
-              and domain not in WHITELIST
-              and "." in domain
-              and len(domain) < 253
-          ):
-            domains.add(domain)
-    except Exception as e:
-      print(f"ошибка при скачивании {url}: {e}")
-
-  return sorted(list(domains))
-
+    return sorted(list(domains))
 
 def save_hosts(domains):
-  filename = "hosts.txt"
-  print(f"сохраняем {len(domains)} уникальных доменов в {filename}")
-  with open(filename, "w", encoding="utf-8") as f:
-    f.write(
-        "# auto-generated mega hosts file by p1vov-like pipeline\n\n"
-    )
-    for domain in domains:
-      f.write(f"0.0.0.0 {domain}\n")
-
+    filename = "hosts.txt"
+    print(f"сохраняем {len(domains)} уникальных доменов в {filename}")
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write("# paranoid mega hosts file by p1vov pipeline\n\n")
+        for domain in domains:
+            f.write(f"0.0.0.0 {domain}\n")
 
 if __name__ == "__main__":
-  all_domains = fetch_domains()
-  if all_domains:
-    save_hosts(all_domains)
-  else:
-    print("хуйня малясь, ни одного домена не выкачалось")
+    all_domains = fetch_domains()
+    if all_domains:
+        save_hosts(all_domains)
+    else:
+        print("хуйня малясь, ни одного домена не выкачалось")
