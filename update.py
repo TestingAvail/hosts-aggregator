@@ -1,7 +1,6 @@
-import re
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# список ебанутых блеклистов (hosts-формат и списки доменов)
 URLS = [
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
@@ -23,7 +22,14 @@ URLS = [
     "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
     "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt"
 ]
-WHITELIST = {"localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru", "cloud.mail.ru", "s.youtube.com", "piwik.opendesktop.org", "yt3.ggpht.com", "suggestqueries.google.com", "redirector.googlevideo.com", "gstaticadssl.l.google.com", "audio-ak-spotify-com.akamaized.net", "stat.online.sberbank.ru", "s3.amazonaws.com"}
+
+WHITELIST = {
+    "localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru",
+    "cloud.mail.ru", "s.youtube.com", "piwik.opendesktop.org", "yt3.ggpht.com",
+    "suggestqueries.google.com", "redirector.googlevideo.com",
+    "gstaticadssl.l.google.com", "audio-ak-spotify-com.akamaized.net",
+    "stat.online.sberbank.ru", "s3.amazonaws.com"
+}
 
 def parse_line(line_str):
     line_str = line_str.strip()
@@ -49,41 +55,68 @@ def parse_line(line_str):
         return domain
     return None
 
-def fetch_domains():
+def fetch_url(url):
     domains = set()
-    for url in URLS:
-        print(f"качаем базу с: {url}")
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=30) as response:
-                for line in response:
-                    clean_domain = parse_line(line.decode("utf-8", errors="ignore"))
-                    if clean_domain:
-                        domains.add(clean_domain)
-        except Exception as e:
-            print(f"ошибка при скачивании {url}: {e}")
+    print(f"качаем базу: {url}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            for line in response:
+                clean_domain = parse_line(line.decode("utf-8", errors="ignore"))
+                if clean_domain:
+                    domains.add(clean_domain)
+        print(f"успешно скачано из {url}: {len(domains)} доменов")
+    except Exception as e:
+        print(f"ошибка при скачивании {url}: {e}")
+    return domains
 
-    return sorted(list(domains))
+def collapse_subdomains(domains_set):
+    print("схлопываем вложенные поддомены для разгрузки роутера...")
+    # Сортируем по длине, чтобы родительские домены обрабатывались раньше поддоменов
+    sorted_domains = sorted(list(domains_set), key=len)
+    result = set()
+
+    for domain in sorted_domains:
+        parts = domain.split('.')
+        is_sub = False
+        # Проверяем, есть ли уже родительский домен в базе
+        for i in range(1, len(parts)):
+            parent = '.'.join(parts[i:])
+            if parent in result:
+                is_sub = True
+                break
+        if not is_sub:result.add(domain)
+
+    print(f"после схлопывания осталось уникальных правил: {len(result)}")
+    return sorted(list(result))
+
+def fetch_all():
+    all_domains = set()
+    # Качаем всё параллельно в 5 потоков, чтобы не тупить
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(fetch_url, url): url for url in URLS}
+        for future in as_completed(futures):
+            all_domains.update(future.result())
+
+    return collapse_subdomains(all_domains)
 
 def save_files(domains):
-    # 1. Оставляем классический hosts (если где-то на роутере пригодится)
     print(f"сохраняем {len(domains)} доменов в hosts.txt")
     with open("hosts.txt", "w", encoding="utf-8") as f:
-        f.write("# paranoid mega hosts file by p1vov pipeline\n\n")
+        f.write("# optimized mega hosts file by p1vov pipeline\n\n")
         for domain in domains:
             f.write(f"0.0.0.0 {domain}\n")
 
-    # 2. Генерируем правильный ABP-формат для расширений в браузере
     abp_filename = "abp.txt"
-    print(f"сохраняем {len(domains)} доменов в ABP-формате в {abp_filename}")
+    print(f"сохраняем оптимизированный ABP список в {abp_filename}")
     with open(abp_filename, "w", encoding="utf-8") as f:
-        f.write("[Adblock Plus]\n! Title: P1vov Optimized ABP List\n! Description: High-efficiency blocklist for extensions\n\n")
+        f.write("[Adblock Plus]\n! Title: P1vov OpenWrt-Safe ABP List\n! Description: Lean and mean blocklist for routers and extensions\n\n")
         for domain in domains:
             f.write(f"||{domain}^\n")
 
 if __name__ == "__main__":
-    all_domains = fetch_domains()
-    if all_domains:
-        save_files(all_domains)
+    final_domains = fetch_all()
+    if final_domains:
+        save_files(final_domains)
     else:
         print("хуйня малясь, ни одного домена не выкачалось")
