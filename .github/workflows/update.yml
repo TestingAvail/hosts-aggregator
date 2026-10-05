@@ -26,6 +26,7 @@ jobs:
         id: meta
         run: |
           sha256sum hosts.txt > hosts.txt.sha256
+          sha256sum abp.txt > abp.txt.sha256
           TAG_NAME="hosts-$(date -u +'%Y.%m.%d-%H%M')"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Generated tag: $TAG_NAME"
@@ -35,14 +36,16 @@ jobs:
         with:
           tag_name: ${{ steps.meta.outputs.TAG_NAME }}
           name: "Mega Hosts Release ${{ steps.meta.outputs.TAG_NAME }}"
-          body: "Automated aggregated hosts blocklist with SHA256 checksum."
+          body: "Automated aggregated hosts and ABP blocklists with SHA256 checksums."
           files: |
             hosts.txt
             hosts.txt.sha256
+            abp.txt
+            abp.txt.sha256
 
       - name: commit and push if changed
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add hosts.txt hosts.txt.sha256
-          git diff --quiet && git diff --staged --quiet || (git commit -m "update mega hosts list [skip ci]" && git push)
+          git add hosts.txt hosts.txt.sha256 abp.txt abp.txt.sha256
+          git diff --quiet && git diff --staged --quiet || (git commit -m "update blocklists [skip ci]" && git push)
