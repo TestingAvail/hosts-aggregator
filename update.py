@@ -65,17 +65,25 @@ def fetch_domains():
 
     return sorted(list(domains))
 
-def save_hosts(domains):
-    filename = "hosts.txt"
-    print(f"сохраняем {len(domains)} уникальных доменов в {filename}")
-    with open(filename, "w", encoding="utf-8") as f:
+def save_files(domains):
+    # 1. Оставляем классический hosts (если где-то на роутере пригодится)
+    print(f"сохраняем {len(domains)} доменов в hosts.txt")
+    with open("hosts.txt", "w", encoding="utf-8") as f:
         f.write("# paranoid mega hosts file by p1vov pipeline\n\n")
         for domain in domains:
             f.write(f"0.0.0.0 {domain}\n")
 
+    # 2. Генерируем правильный ABP-формат для расширений в браузере
+    abp_filename = "abp.txt"
+    print(f"сохраняем {len(domains)} доменов в ABP-формате в {abp_filename}")
+    with open(abp_filename, "w", encoding="utf-8") as f:
+        f.write("[Adblock Plus]\n! Title: P1vov Optimized ABP List\n! Description: High-efficiency blocklist for extensions\n\n")
+        for domain in domains:
+            f.write(f"||{domain}^\n")
+
 if __name__ == "__main__":
     all_domains = fetch_domains()
     if all_domains:
-        save_hosts(all_domains)
+        save_files(all_domains)
     else:
         print("хуйня малясь, ни одного домена не выкачалось")
