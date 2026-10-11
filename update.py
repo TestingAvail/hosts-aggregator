@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 URLS = [
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
-    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro-onlydomains.txt",
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
     "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt",
     "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
     "https://phishing.army/download/phishing_army_blocklist_extended.txt",
