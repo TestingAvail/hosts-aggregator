@@ -1,7 +1,8 @@
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-URLS = [
+# Жирный набор для нормального железа
+FAT_URLS = [
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
@@ -18,9 +19,17 @@ URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.xiaomi-onlydomains.txt",
     "https://adaway.org/hosts.txt",
     "https://someonewhocares.org/hosts/zero/hosts",
-    "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext"
+    "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext",
     "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
     "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt"
+]
+
+# Слим-набор для слабого железа (OISD + самое необходимое без археологии)
+SLIM_URLS = [
+    "https://big.oisd.nl/",
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.winoffice-onlydomains.txt",
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.apple-onlydomains.txt"
 ]
 
 WHITELIST = {
@@ -72,51 +81,52 @@ def fetch_url(url):
 
 def collapse_subdomains(domains_set):
     print("схлопываем вложенные поддомены для разгрузки роутера...")
-    # Сортируем по длине, чтобы родительские домены обрабатывались раньше поддоменов
     sorted_domains = sorted(list(domains_set), key=len)
     result = set()
 
     for domain in sorted_domains:
         parts = domain.split('.')
         is_sub = False
-        # Проверяем, есть ли уже родительский домен в базе
         for i in range(1, len(parts)):
             parent = '.'.join(parts[i:])
             if parent in result:
                 is_sub = True
                 break
-        if not is_sub:result.add(domain)
+        if not is_sub:
+            result.add(domain)
 
     print(f"после схлопывания осталось уникальных правил: {len(result)}")
     return sorted(list(result))
 
-def fetch_all():
+def fetch_all(urls_list):
     all_domains = set()
-    # Качаем всё параллельно в 5 потоков, чтобы не тупить
     with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fetch_url, url): url for url in URLS}
+        futures = {executor.submit(fetch_url, url): url for url in urls_list}
         for future in as_completed(futures):
             all_domains.update(future.result())
 
     return collapse_subdomains(all_domains)
 
-def save_files(domains):
-    print(f"сохраняем {len(domains)} доменов в hosts.txt")
-    with open("hosts.txt", "w", encoding="utf-8") as f:
-        f.write("# optimized mega hosts file by p1vov pipeline\n\n")
+def save_files(domains, hosts_name, abp_name, title_prefix):
+    print(f"сохраняем {len(domains)} доменов в {hosts_name}")
+    with open(hosts_name, "w", encoding="utf-8") as f:
+        f.write(f"# optimized mega hosts file ({title_prefix}) by p1vov pipeline\n\n")
         for domain in domains:
             f.write(f"0.0.0.0 {domain}\n")
 
-    abp_filename = "abp.txt"
-    print(f"сохраняем оптимизированный ABP список в {abp_filename}")
-    with open(abp_filename, "w", encoding="utf-8") as f:
-        f.write("[Adblock Plus]\n! Title: P1vov OpenWrt-Safe ABP List\n! Description: Lean and mean blocklist for routers and extensions\n\n")
+    print(f"сохраняем ABP список в {abp_name}")
+    with open(abp_name, "w", encoding="utf-8") as f:
+        f.write(f"[Adblock Plus]\n! Title: P1vov OpenWrt-Safe ABP List ({title_prefix})\n! Description: Lean and mean blocklist\n\n")
         for domain in domains:
             f.write(f"||{domain}^\n")
 
 if __name__ == "__main__":
-    final_domains = fetch_all()
-    if final_domains:
-        save_files(final_domains)
-    else:
-        print("хуйня малясь, ни одного домена не выкачалось")
+    print("--- сборка FAT версии ---")
+    fat_domains = fetch_all(FAT_URLS)
+    if fat_domains:
+        save_files(fat_domains, "hosts.txt", "abp.txt", "FAT")
+    
+    print("\n--- сборка SLIM версии ---")
+    slim_domains = fetch_all(SLIM_URLS)
+    if slim_domains:
+        save_files(slim_domains, "hosts-slim.txt", "abp-slim.txt", "SLIM")
