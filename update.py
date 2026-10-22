@@ -33,11 +33,40 @@ SLIM_URLS = [
 ]
 
 WHITELIST = {
+    # Старая база
     "localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru",
     "cloud.mail.ru", "s.youtube.com", "piwik.opendesktop.org", "yt3.ggpht.com",
     "suggestqueries.google.com", "redirector.googlevideo.com",
     "gstaticadssl.l.google.com", "audio-ak-spotify-com.akamaized.net",
-    "stat.online.sberbank.ru", "s3.amazonaws.com"
+    "stat.online.sberbank.ru", "s3.amazonaws.com",
+
+    # Трекеры и прочая муть
+    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "trk.mail.ru", "s.click.aliexpress.com",
+
+    # DoH / DoT серверы
+    "dns.quad9.net", "dns10.quad9.net", "cloudflare-dns.com", "security.cloudflare-dns.com",
+    "family.cloudflare-dns.com", "one.one.one.one", "1dot1dot1dot1.cloudflare-dns.com",
+    "dns.google", "common.dot.dns.yandex.net", "safe.dot.dns.yandex.net", "family.dot.dns.yandex.net",
+    "dns.comss.one", "xbox-dns.ru", "dns.dns-ai.ru", "dns.bezmezhau.com", "geohide.ru",
+    "eu.geohide.ru", "us.geohide.ru", "dns.malw.link", "dns.zapret.moed.webshiftvpn.ru",
+    "dns.dagami.ru", "freedns.controld.com", "unfiltered.joindns4.eu", "protective.joindns4.eu",
+    "child.joindns4.eu",
+
+    # TG WS Proxy
+    "web.telegram.org", "pclead.co.uk", "offshor.co.uk", "cakeisalie.co.uk", "noskomnadzor.co.uk",
+    "lovetrue.co.uk", "sorokdva.co.uk", "pyatdesyatdva.co.uk", "kartoshka.co.uk", "sorokodin.co.uk",
+    "pyatdesyatodin.co.uk", "notelega.co.uk", "ebally.co.uk", "nebally.co.uk", "havegreatday.co.uk",
+    "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
+    "nothingthere.co.uk",
+
+    # Проверка интернета и время (NTP / Connectivity Check)
+    "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients1.google.com",
+    "clients3.google.com", "play.googleapis.com", "android.clients.google.com", "time.android.com",
+    "time.google.com", "pool.ntp.org", "ntp.org", "connect.rom.miui.com",
+    "connectivitycheck.platform.hicloud.com", "connectivitycheck.cbg-app.huawei.com",
+    "www.qualcomm.cn", "captive.apple.com", "time.apple.com", "www.msftconnecttest.com",
+    "www.msftncsi.com", "time.windows.com", "detectportal.firefox.com", "nmcheck.gnome.org",
+    "connectivity-check.ubuntu.com"
 }
 
 def parse_line(line_str):
