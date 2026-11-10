@@ -49,6 +49,18 @@ jobs:
             abp-slim.txt
             abp-slim.txt.sha256
 
+      - name: Prune old releases (keep last 30)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          KEEP=30
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' \
+            | tail -n +$((KEEP+1)) \
+            | while read -r tag; do
+                echo "Удаляю релиз $tag"
+                gh release delete "$tag" --yes --cleanup-tag || true
+              done
+
       - name: commit and push if changed
         run: |
           git config --global user.name 'github-actions[bot]'
