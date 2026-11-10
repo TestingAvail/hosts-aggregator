@@ -107,11 +107,17 @@ FORCE_BLOCK = {
     "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
     "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
     
-    # Трекеры Яндекса и других
+    # Трекеры Яндекса
     "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
-    "piwik.opendesktop.org"
-}
+    "piwik.opendesktop.org",
 
+    # Глобальные трекеры (со скриншотов)
+    "googletagmanager.com", 
+    "doubleclick.net",
+    "adjust.com", 
+    "adjust.world",
+    "ucweb.com"
+}
 # ==========================================
 # ЛОГИКА ОБРАБОТКИ
 # ==========================================
