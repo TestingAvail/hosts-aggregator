@@ -1,7 +1,9 @@
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Жирный набор для нормального железа
+# ==========================================
+# ИСХОДНЫЕ СПИСКИ (Ссылки на блоклисты)
+# ==========================================
 FAT_URLS = [
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
@@ -24,7 +26,6 @@ FAT_URLS = [
     "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt"
 ]
 
-# Слим-набор для слабого железа (OISD + самое необходимое без археологии)
 SLIM_URLS = [
     "https://big.oisd.nl/",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
@@ -32,18 +33,22 @@ SLIM_URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.apple-onlydomains.txt"
 ]
 
-# 1. БЕЛЫЙ СПИСОК (То, что РАЗРЕШАЕМ, чтобы сервисы работали)
+# ==========================================
+# БЕЛЫЙ СПИСОК (РАЗРЕШАЕМ РАБОТАТЬ)
+# ==========================================
+# ВАЖНО: Здесь только то, без чего сервисы сломаются.
+# Никаких трекеров (yabs, trk.mail.ru и т.д.) здесь быть не должно!
 WHITELIST = {
     # Базовое
     "localhost", "local", "broadcasthost", "ip6-localhost",
 
-    # ВК (чтобы работал сайт и приложение)
+    # ВК (сайт и приложение)
     "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
 
     # Почта Mail.ru (без трекеров)
     "cloud.mail.ru", "mail.ru", "imgsmail.ru",
 
-    # YouTube (CDN для аватарок и видео)
+    # YouTube (CDN)
     "yt3.ggpht.com", "redirector.googlevideo.com", "gstaticadssl.l.google.com",
 
     # Spotify (CDN)
@@ -61,16 +66,16 @@ WHITELIST = {
     "dns.dagami.ru", "freedns.controld.com", "unfiltered.joindns4.eu", "protective.joindns4.eu",
     "child.joindns4.eu",
 
-    # TG WS Proxy (для обхода блокировок)
+    # TG WS Proxy
     "web.telegram.org", "pclead.co.uk", "offshor.co.uk", "cakeisalie.co.uk", "noskomnadzor.co.uk",
     "lovetrue.co.uk", "sorokdva.co.uk", "pyatdesyatdva.co.uk", "kartoshka.co.uk", "sorokodin.co.uk",
     "pyatdesyatodin.co.uk", "notelega.co.uk", "ebally.co.uk", "nebally.co.uk", "havegreatday.co.uk",
     "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
     "nothingthere.co.uk",
 
-    # Qwen (рабочие домены)
+    # Qwen (только функциональные домены)
     "qwen.ai", "api.qwen.ai", "qwenlm.ai",
-
+    
     # Alibaba CDN (только для картинок и шрифтов Qwen)
     "img.alicdn.com", "at.alicdn.com", "p.alicdn.com",
     "api.aliyuncs.com", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
@@ -85,24 +90,31 @@ WHITELIST = {
     "connectivity-check.ubuntu.com"
 }
 
-# 2. ЧЕРНЫЙ СПИСОК (То, что БЛОКИРУЕМ, даже если родитель в белом списке)
+# ==========================================
+# ЧЕРНЫЙ СПИСОК (БЛОКИРУЕМ ВСЕГДА)
+# ==========================================
+# Эти домены блокируются, даже если их "родитель" в белом списке.
 FORCE_BLOCK = {
-    # Реклама и трекинг Alibaba (ломаем рекламу Qwen и AliExpress)
+    # Реклама и трекинг Alibaba
     "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
     "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
     "tanx.com", "alimama.com",
 
-    # Аналитика Qwen (нам не нужна)
+    # Аналитика Qwen
     "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
-
-    # Реклама и трекеры ВК/Mail.ru (блокируем, хотя сам ВК разрешен)
+    
+    # Реклама и трекеры ВК/Mail.ru
     "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
     "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
-
-    # Трекеры Яндекса и других (которые ты раньше случайно разрешил)
-    "yabs.yandex.ru", "redirect.appmetrica.yandex.com"
+    
+    # Трекеры Яндекса и других
+    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
+    "piwik.opendesktop.org"
 }
 
+# ==========================================
+# ЛОГИКА ОБРАБОТКИ
+# ==========================================
 def parse_line(line_str):
     line_str = line_str.strip()
     if not line_str or line_str.startswith("!") or line_str.startswith("#"):
@@ -123,15 +135,22 @@ def parse_line(line_str):
 
     domain = domain.lower().strip()
 
-    # 1. Если домен в FORCE_BLOCK (или это его поддомен) -> БЛОКИРУЕМ
+    # 1. ПРИНУДИТЕЛЬНАЯ БЛОКИРОВКА (проверка поддоменов тоже)
     if any(domain == fb or domain.endswith("." + fb) for fb in FORCE_BLOCK):
         return domain
 
-    # 2. Если домен в WHITELIST (или это его поддомен) -> ПРОПУСКАЕМ
+    # 2. БЕЛЫЙ СПИСОК (точное совпадение или поддомен)
     if any(domain == wl or domain.endswith("." + wl) for wl in WHITELIST):
         return None
 
-    # 3. Всё остальное -> БЛОКИРУЕМ
+    # 3. ЗАЩИТА ОТ ЛОМАНИЯ БЕЛЫХ ПОДДОМЕНОВ В ABP
+    # Если текущий домен является "родителем" для чего-то из белого списка,
+    # мы его не блокируем. Иначе в ABP формате `||alicdn.com^` заблокирует
+    # наш `img.alicdn.com` и Qwen сломается.
+    if any(wl.endswith("." + domain) for wl in WHITELIST):
+        return None
+
+    # 4. Всё остальное блокируем
     if domain and "." in domain and len(domain) < 253 and " " not in domain:
         return domain
     return None
