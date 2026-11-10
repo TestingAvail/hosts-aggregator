@@ -32,18 +32,27 @@ SLIM_URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.apple-onlydomains.txt"
 ]
 
+# 1. БЕЛЫЙ СПИСОК (То, что РАЗРЕШАЕМ, чтобы сервисы работали)
 WHITELIST = {
-    # Старая база
-    "localhost", "local", "broadcasthost", "ip6-localhost", "vk.ru",
-    "cloud.mail.ru", "s.youtube.com", "piwik.opendesktop.org", "yt3.ggpht.com",
-    "suggestqueries.google.com", "redirector.googlevideo.com",
-    "gstaticadssl.l.google.com", "audio-ak-spotify-com.akamaized.net",
+    # Базовое
+    "localhost", "local", "broadcasthost", "ip6-localhost",
+
+    # ВК (чтобы работал сайт и приложение)
+    "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
+
+    # Почта Mail.ru (без трекеров)
+    "cloud.mail.ru", "mail.ru", "imgsmail.ru",
+
+    # YouTube (CDN для аватарок и видео)
+    "yt3.ggpht.com", "redirector.googlevideo.com", "gstaticadssl.l.google.com",
+
+    # Spotify (CDN)
+    "audio-ak-spotify-com.akamaized.net",
+
+    # Сбербанк
     "stat.online.sberbank.ru", "s3.amazonaws.com",
 
-    # Трекеры и прочая муть
-    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "trk.mail.ru", "s.click.aliexpress.com",
-
-    # DoH / DoT серверы
+    # DoH / DoT (чтобы DNS не сломался)
     "dns.quad9.net", "dns10.quad9.net", "cloudflare-dns.com", "security.cloudflare-dns.com",
     "family.cloudflare-dns.com", "one.one.one.one", "1dot1dot1dot1.cloudflare-dns.com",
     "dns.google", "common.dot.dns.yandex.net", "safe.dot.dns.yandex.net", "family.dot.dns.yandex.net",
@@ -52,14 +61,21 @@ WHITELIST = {
     "dns.dagami.ru", "freedns.controld.com", "unfiltered.joindns4.eu", "protective.joindns4.eu",
     "child.joindns4.eu",
 
-    # TG WS Proxy
+    # TG WS Proxy (для обхода блокировок)
     "web.telegram.org", "pclead.co.uk", "offshor.co.uk", "cakeisalie.co.uk", "noskomnadzor.co.uk",
     "lovetrue.co.uk", "sorokdva.co.uk", "pyatdesyatdva.co.uk", "kartoshka.co.uk", "sorokodin.co.uk",
     "pyatdesyatodin.co.uk", "notelega.co.uk", "ebally.co.uk", "nebally.co.uk", "havegreatday.co.uk",
     "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
     "nothingthere.co.uk",
 
-    # Проверка интернета и время (NTP / Connectivity Check)
+    # Qwen (рабочие домены)
+    "qwen.ai", "api.qwen.ai", "qwenlm.ai",
+
+    # Alibaba CDN (только для картинок и шрифтов Qwen)
+    "img.alicdn.com", "at.alicdn.com", "p.alicdn.com",
+    "api.aliyuncs.com", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
+
+    # Проверка интернета (Captive Portal)
     "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients1.google.com",
     "clients3.google.com", "play.googleapis.com", "android.clients.google.com", "time.android.com",
     "time.google.com", "pool.ntp.org", "ntp.org", "connect.rom.miui.com",
@@ -67,6 +83,24 @@ WHITELIST = {
     "www.qualcomm.cn", "captive.apple.com", "time.apple.com", "www.msftconnecttest.com",
     "www.msftncsi.com", "time.windows.com", "detectportal.firefox.com", "nmcheck.gnome.org",
     "connectivity-check.ubuntu.com"
+}
+
+# 2. ЧЕРНЫЙ СПИСОК (То, что БЛОКИРУЕМ, даже если родитель в белом списке)
+FORCE_BLOCK = {
+    # Реклама и трекинг Alibaba (ломаем рекламу Qwen и AliExpress)
+    "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
+    "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
+    "tanx.com", "alimama.com",
+
+    # Аналитика Qwen (нам не нужна)
+    "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
+
+    # Реклама и трекеры ВК/Mail.ru (блокируем, хотя сам ВК разрешен)
+    "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
+    "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
+
+    # Трекеры Яндекса и других (которые ты раньше случайно разрешил)
+    "yabs.yandex.ru", "redirect.appmetrica.yandex.com"
 }
 
 def parse_line(line_str):
@@ -89,7 +123,16 @@ def parse_line(line_str):
 
     domain = domain.lower().strip()
 
-    if domain and domain not in WHITELIST and "." in domain and len(domain) < 253 and " " not in domain:
+    # 1. Если домен в FORCE_BLOCK (или это его поддомен) -> БЛОКИРУЕМ
+    if any(domain == fb or domain.endswith("." + fb) for fb in FORCE_BLOCK):
+        return domain
+
+    # 2. Если домен в WHITELIST (или это его поддомен) -> ПРОПУСКАЕМ
+    if any(domain == wl or domain.endswith("." + wl) for wl in WHITELIST):
+        return None
+
+    # 3. Всё остальное -> БЛОКИРУЕМ
+    if domain and "." in domain and len(domain) < 253 and " " not in domain:
         return domain
     return None
 
