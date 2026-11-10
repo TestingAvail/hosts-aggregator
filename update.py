@@ -36,8 +36,6 @@ SLIM_URLS = [
 # ==========================================
 # БЕЛЫЙ СПИСОК (РАЗРЕШАЕМ РАБОТАТЬ)
 # ==========================================
-# ВАЖНО: Здесь только то, без чего сервисы сломаются.
-# Никаких трекеров (yabs, trk.mail.ru и т.д.) здесь быть не должно!
 WHITELIST = {
     # Базовое
     "localhost", "local", "broadcasthost", "ip6-localhost",
@@ -73,11 +71,16 @@ WHITELIST = {
     "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
     "nothingthere.co.uk",
 
-    # Qwen (только функциональные домены)
-    "qwen.ai", "api.qwen.ai", "qwenlm.ai",
+    # Qwen (включая домены авторизации и аккаунта со скриншота)
+    "qwen.ai", "api.qwen.ai", "qwenlm.ai", 
+    "qwen.com", "auth.qwen.ai", "sg-entitlement.qwen.com", "sg-member.qwen.com",
     
-    # Alibaba CDN (только для картинок и шрифтов Qwen)
-    "img.alicdn.com", "at.alicdn.com", "p.alicdn.com",
+    # Alibaba CDN (ВСЕ поддомены, которые грузят картинки и интерфейс Qwen со скриншотов)
+    "img.alicdn.com", "at.alicdn.com", "p.alicdn.com", 
+    "o.alicdn.com", "g.alicdn.com", "assets.alicdn.com",
+    "aliyunga0019.com",
+    
+    # API Alibaba Cloud (для работы Qwen)
     "api.aliyuncs.com", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
 
     # Проверка интернета (Captive Portal)
@@ -93,12 +96,12 @@ WHITELIST = {
 # ==========================================
 # ЧЕРНЫЙ СПИСОК (БЛОКИРУЕМ ВСЕГДА)
 # ==========================================
-# Эти домены блокируются, даже если их "родитель" в белом списке.
 FORCE_BLOCK = {
     # Реклама и трекинг Alibaba
     "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
     "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
     "tanx.com", "alimama.com",
+    "alibabadns.com",  # Со скриншота (DNS-телеметрия Alibaba)
 
     # Аналитика Qwen
     "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
@@ -111,12 +114,16 @@ FORCE_BLOCK = {
     "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
     "piwik.opendesktop.org",
 
-    # Глобальные трекеры (со скриншотов)
+    # Глобальные трекеры (которые пролезли до uBlock)
     "googletagmanager.com", 
+    "www.googletagmanager.com",
     "doubleclick.net",
+    "googleads.g.doubleclick.net",
     "adjust.com", 
     "adjust.world",
-    "ucweb.com"
+    "ucweb.com",         # Со скриншота (телеметрия браузера UC)
+    "tbcache.com",       # Со скриншота (аналитика Alibaba)
+    "fourier.taobao.com" # Конкретный трекер Taobao, не блокируем весь магазин
 }
 # ==========================================
 # ЛОГИКА ОБРАБОТКИ
