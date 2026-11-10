@@ -139,13 +139,13 @@ def fetch_all(urls_list):
 def save_files(domains, hosts_name, abp_name, title_prefix):
     print(f"сохраняем {len(domains)} доменов в {hosts_name}")
     with open(hosts_name, "w", encoding="utf-8") as f:
-        f.write(f"# optimized mega hosts file ({title_prefix}) by p1vov pipeline\n\n")
+        f.write(f"# optimized mega hosts file ({title_prefix})\n\n")
         for domain in domains:
             f.write(f"0.0.0.0 {domain}\n")
 
     print(f"сохраняем ABP список в {abp_name}")
     with open(abp_name, "w", encoding="utf-8") as f:
-        f.write(f"[Adblock Plus]\n! Title: P1vov OpenWrt-Safe ABP List ({title_prefix})\n! Description: Lean and mean blocklist\n\n")
+        f.write(f"[Adblock Plus]\n! Title: OpenWrt-Safe ABP List ({title_prefix})\n! Description: Lean and mean blocklist\n\n")
         for domain in domains:
             f.write(f"||{domain}^\n")
 
