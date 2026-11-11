@@ -13,7 +13,7 @@ FAT_URLS = [
     "https://easylist-downloads.adblockplus.org/cntblock.txt",   # RU AdList: Counters
     "https://easylist-downloads.adblockplus.org/bitblock.txt",   # RU AdList: BitBlock
     
-    # --- Списки от Hagezi (Pro++ - очень мощный, может требовать白名单) ---
+    # --- Списки от Hagezi ---
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.huawei-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.winoffice-onlydomains.txt",
