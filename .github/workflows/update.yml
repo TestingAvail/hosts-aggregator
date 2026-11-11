@@ -21,7 +21,7 @@ jobs:
           cache: 'pip' # Включаем кэширование pip для скорости
 
       - name: Install dependencies
-        run: pip install aiohttp brotli # brotli нужен, если в скрипте остался 'br' в заголовках
+        run: pip install -r requirements.txt
 
       - name: run parser
         run: python update.py
