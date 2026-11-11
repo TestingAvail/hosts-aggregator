@@ -5,20 +5,31 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # ИСХОДНЫЕ СПИСКИ (Ссылки на блоклисты)
 # ==========================================
 FAT_URLS = [
+    # --- Базовые и региональные списки ---
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
+    "https://easylist-downloads.adblockplus.org/advblock.txt",  # RU AdList classic
+    "https://filters.adtidy.org/extension/ublock/filters/1.txt", # AdGuard Russian
+    "https://easylist-downloads.adblockplus.org/cntblock.txt",   # RU AdList: Counters
+    "https://easylist-downloads.adblockplus.org/bitblock.txt",   # RU AdList: BitBlock
+    
+    # --- Списки от Hagezi (Pro++ - очень мощный, может требовать白名单) ---
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
-    "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt",
-    "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
-    "https://phishing.army/download/phishing_army_blocklist_extended.txt",
-    "https://v.firebog.net/hosts/RPiList-Malware.txt",
-    "https://v.firebog.net/hosts/RPiList-Phishing.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.huawei-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.winoffice-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.apple-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.samsung-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.tiktok.extended-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.xiaomi-onlydomains.txt",
+    
+    # --- Списки безопасности (обязательно) ---
+    "https://ublockorigin.github.io/uAssets/filters/badware.txt", # uBlock filters – Badware risks
+    "https://phishing.army/download/phishing_army_blocklist_extended.txt",
+    "https://v.firebog.net/hosts/RPiList-Malware.txt",
+    
+    # --- Другие полезные списки ---
+    "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt",
+    "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
     "https://adaway.org/hosts.txt",
     "https://someonewhocares.org/hosts/zero/hosts",
     "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext",
@@ -27,12 +38,20 @@ FAT_URLS = [
 ]
 
 SLIM_URLS = [
-    "https://big.oisd.nl/",
+    # --- Базовые и региональные списки (самое важное) ---
+    "https://big.oisd.nl/",  # OISD Big - отличный баланс
+    "https://easylist-downloads.adblockplus.org/advblock.txt",  # RU AdList classic
+    
+    # --- Списки от Hagezi (Pro - мощный, но стабильный) ---
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
-    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.winoffice-onlydomains.txt",
-    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.apple-onlydomains.txt"
+    
+    # --- Списки безопасности (обязательно) ---
+    "https://ublockorigin.github.io/uAssets/filters/badware.txt", # uBlock filters – Badware risks
+    
+    # --- Дополнительно (по желанию, но очень полезно) ---
+    "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+    "https://someonewhocares.org/hosts/zero/hosts"
 ]
-
 # ==========================================
 # БЕЛЫЙ СПИСОК (РАЗРЕШАЕМ РАБОТАТЬ)
 # ==========================================
