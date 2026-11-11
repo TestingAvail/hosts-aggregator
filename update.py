@@ -1,5 +1,6 @@
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+import aiohttp
+import ssl
 
 # ==========================================
 # ИСХОДНЫЕ СПИСКИ (Ссылки на блоклисты)
@@ -8,10 +9,10 @@ FAT_URLS = [
     # --- Базовые и региональные списки ---
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
-    "https://easylist-downloads.adblockplus.org/advblock.txt",  # RU AdList classic
-    "https://filters.adtidy.org/extension/ublock/filters/1.txt", # AdGuard Russian
-    "https://easylist-downloads.adblockplus.org/cntblock.txt",   # RU AdList: Counters
-    "https://easylist-downloads.adblockplus.org/bitblock.txt",   # RU AdList: BitBlock
+    "https://filters.adtidy.org/extension/ublock/filters/1.txt",   # AdGuard Russian
+    "https://filters.adtidy.org/extension/ublock/filters/2.txt",   # RU AdList (advblock)
+    "https://filters.adtidy.org/extension/ublock/filters/207.txt", # RU AdList: Counters
+    "https://filters.adtidy.org/extension/ublock/filters/6.txt",   # RU AdList: BitBlock
     
     # --- Списки от Hagezi ---
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
@@ -23,9 +24,10 @@ FAT_URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.xiaomi-onlydomains.txt",
     
     # --- Списки безопасности (обязательно) ---
-    "https://ublockorigin.github.io/uAssets/filters/badware.txt", # uBlock filters – Badware risks
+    "https://ublockorigin.github.io/uAssets/filters/badware.txt",
     "https://phishing.army/download/phishing_army_blocklist_extended.txt",
     "https://v.firebog.net/hosts/RPiList-Malware.txt",
+    "https://v.firebog.net/hosts/RPiList-Phishing.txt", # <- Восстановленная ссылка!
     
     # --- Другие полезные списки ---
     "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt",
@@ -39,22 +41,25 @@ FAT_URLS = [
 
 SLIM_URLS = [
     # --- Базовые и региональные списки (самое важное) ---
-    "https://big.oisd.nl/",  # OISD Big - отличный баланс
-    "https://easylist-downloads.adblockplus.org/advblock.txt",  # RU AdList classic
+    "https://big.oisd.nl/", 
+    "https://filters.adtidy.org/extension/ublock/filters/2.txt",   # RU AdList
     
     # --- Списки от Hagezi (Pro - мощный, но стабильный) ---
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
     
     # --- Списки безопасности (обязательно) ---
-    "https://ublockorigin.github.io/uAssets/filters/badware.txt", # uBlock filters – Badware risks
+    "https://ublockorigin.github.io/uAssets/filters/badware.txt",
     
     # --- Дополнительно (по желанию, но очень полезно) ---
     "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
     "https://someonewhocares.org/hosts/zero/hosts"
 ]
+
 # ==========================================
 # БЕЛЫЙ СПИСОК (РАЗРЕШАЕМ РАБОТАТЬ)
 # ==========================================
+# ВАЖНО: Здесь только то, без чего сервисы сломаются.
+# Никаких трекеров здесь быть не должно!
 WHITELIST = {
     # Базовое
     "localhost", "local", "broadcasthost", "ip6-localhost",
@@ -90,11 +95,11 @@ WHITELIST = {
     "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
     "nothingthere.co.uk",
 
-    # Qwen (включая домены авторизации и аккаунта со скриншота)
+    # Qwen (включая домены авторизации и аккаунта)
     "qwen.ai", "api.qwen.ai", "qwenlm.ai", 
     "qwen.com", "auth.qwen.ai", "sg-entitlement.qwen.com", "sg-member.qwen.com",
     
-    # Alibaba CDN (ВСЕ поддомены, которые грузят картинки и интерфейс Qwen со скриншотов)
+    # Alibaba CDN (ВСЕ поддомены, которые грузят картинки и интерфейс Qwen)
     "img.alicdn.com", "at.alicdn.com", "p.alicdn.com", 
     "o.alicdn.com", "g.alicdn.com", "assets.alicdn.com",
     "aliyunga0019.com",
@@ -118,12 +123,12 @@ WHITELIST = {
 # ==========================================
 # ЧЕРНЫЙ СПИСОК (БЛОКИРУЕМ ВСЕГДА)
 # ==========================================
+# Эти домены блокируются, даже если их "родитель" в белом списке.
 FORCE_BLOCK = {
     # Реклама и трекинг Alibaba
     "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
     "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
-    "tanx.com", "alimama.com",
-    "alibabadns.com",  # Со скриншота (DNS-телеметрия Alibaba)
+    "tanx.com", "alimama.com", "alibabadns.com",
 
     # Аналитика Qwen
     "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
@@ -136,17 +141,13 @@ FORCE_BLOCK = {
     "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
     "piwik.opendesktop.org",
 
-    # Глобальные трекеры (которые пролезли до uBlock)
-    "googletagmanager.com", 
-    "www.googletagmanager.com",
-    "doubleclick.net",
-    "googleads.g.doubleclick.net",
-    "adjust.com", 
-    "adjust.world",
-    "ucweb.com",         # Со скриншота (телеметрия браузера UC)
-    "tbcache.com",       # Со скриншота (аналитика Alibaba)
-    "fourier.taobao.com" # Конкретный трекер Taobao, не блокируем весь магазин
+    # Глобальные трекеры
+    "googletagmanager.com", "www.googletagmanager.com",
+    "doubleclick.net", "googleads.g.doubleclick.net",
+    "adjust.com", "adjust.world",
+    "ucweb.com", "tbcache.com", "fourier.taobao.com"
 }
+
 # ==========================================
 # ЛОГИКА ОБРАБОТКИ
 # ==========================================
@@ -170,18 +171,15 @@ def parse_line(line_str):
 
     domain = domain.lower().strip()
 
-    # 1. ПРИНУДИТЕЛЬНАЯ БЛОКИРОВКА (проверка поддоменов тоже)
+    # 1. ПРИНУДИТЕЛЬНАЯ БЛОКИРОВКА
     if any(domain == fb or domain.endswith("." + fb) for fb in FORCE_BLOCK):
         return domain
 
-    # 2. БЕЛЫЙ СПИСОК (точное совпадение или поддомен)
+    # 2. БЕЛЫЙ СПИСОК
     if any(domain == wl or domain.endswith("." + wl) for wl in WHITELIST):
         return None
 
     # 3. ЗАЩИТА ОТ ЛОМАНИЯ БЕЛЫХ ПОДДОМЕНОВ В ABP
-    # Если текущий домен является "родителем" для чего-то из белого списка,
-    # мы его не блокируем. Иначе в ABP формате `||alicdn.com^` заблокирует
-    # наш `img.alicdn.com` и Qwen сломается.
     if any(wl.endswith("." + domain) for wl in WHITELIST):
         return None
 
@@ -190,26 +188,56 @@ def parse_line(line_str):
         return domain
     return None
 
-def fetch_url(url):
+async def fetch_url_async(session, url, semaphore):
     domains = set()
-    print(f"качаем базу: {url}")
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            for line in response:
-                clean_domain = parse_line(line.decode("utf-8", errors="ignore"))
-                if clean_domain:
-                    domains.add(clean_domain)
-        print(f"успешно скачано из {url}: {len(domains)} доменов")
-    except Exception as e:
-        print(f"ошибка при скачивании {url}: {e}")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:159.0) Gecko/20100101 Firefox/159.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br"
+    }
+    
+    async with semaphore:
+        try:
+            print(f"качаем базу: {url}")
+            async with session.get(url, headers=headers, timeout=30, ssl=False) as response:
+                if response.status == 200:
+                    text = await response.text(errors='ignore')
+                    for line in text.splitlines():
+                        clean_domain = parse_line(line)
+                        if clean_domain:
+                            domains.add(clean_domain)
+                    print(f"успешно скачано из {url}: {len(domains)} доменов")
+                else:
+                    print(f"ошибка HTTP {response.status} при скачивании {url}")
+        except Exception as e:
+            print(f"ошибка при скачивании {url}: {e}")
     return domains
+
+async def fetch_all_async(urls_list):
+    all_domains = set()
+    semaphore = asyncio.Semaphore(50) 
+    
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    connector = aiohttp.TCPConnector(ssl=ssl_context, limit=50)
+    
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [fetch_url_async(session, url, semaphore) for url in urls_list]
+        results = await asyncio.gather(*tasks)
+        
+    for domains in results:
+        all_domains.update(domains)
+        
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, collapse_subdomains, all_domains)
 
 def collapse_subdomains(domains_set):
     print("схлопываем вложенные поддомены для разгрузки роутера...")
     sorted_domains = sorted(list(domains_set), key=len)
     result = set()
-
     for domain in sorted_domains:
         parts = domain.split('.')
         is_sub = False
@@ -220,18 +248,8 @@ def collapse_subdomains(domains_set):
                 break
         if not is_sub:
             result.add(domain)
-
     print(f"после схлопывания осталось уникальных правил: {len(result)}")
     return sorted(list(result))
-
-def fetch_all(urls_list):
-    all_domains = set()
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fetch_url, url): url for url in urls_list}
-        for future in as_completed(futures):
-            all_domains.update(future.result())
-
-    return collapse_subdomains(all_domains)
 
 def save_files(domains, hosts_name, abp_name, title_prefix):
     print(f"сохраняем {len(domains)} доменов в {hosts_name}")
@@ -248,11 +266,11 @@ def save_files(domains, hosts_name, abp_name, title_prefix):
 
 if __name__ == "__main__":
     print("--- сборка FAT версии ---")
-    fat_domains = fetch_all(FAT_URLS)
+    fat_domains = asyncio.run(fetch_all_async(FAT_URLS))
     if fat_domains:
         save_files(fat_domains, "hosts.txt", "abp.txt", "FAT")
     
     print("\n--- сборка SLIM версии ---")
-    slim_domains = fetch_all(SLIM_URLS)
+    slim_domains = asyncio.run(fetch_all_async(SLIM_URLS))
     if slim_domains:
         save_files(slim_domains, "hosts-slim.txt", "abp-slim.txt", "SLIM")
