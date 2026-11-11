@@ -83,6 +83,9 @@ WHITELIST = {
     # API Alibaba Cloud (для работы Qwen)
     "api.aliyuncs.com", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
 
+    # RuTracker (и его статика)
+    "rutracker.org", "rutracker.cc", "static.rutracker.cc",
+
     # Проверка интернета (Captive Portal)
     "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients1.google.com",
     "clients3.google.com", "play.googleapis.com", "android.clients.google.com", "time.android.com",
