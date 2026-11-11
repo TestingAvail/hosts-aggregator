@@ -196,41 +196,50 @@ async def fetch_url_async(session, url, semaphore):
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br"
     }
-    
+
     async with semaphore:
-        try:
-            print(f"качаем базу: {url}")
-            async with session.get(url, headers=headers, timeout=30, ssl=False) as response:
-                if response.status == 200:
-                    text = await response.text(errors='ignore')
-                    for line in text.splitlines():
-                        clean_domain = parse_line(line)
-                        if clean_domain:
-                            domains.add(clean_domain)
-                    print(f"успешно скачано из {url}: {len(domains)} доменов")
-                else:
-                    print(f"ошибка HTTP {response.status} при скачивании {url}")
-        except Exception as e:
-            print(f"ошибка при скачивании {url}: {e}")
+        # Делаем до 3 попыток скачивания
+        for attempt in range(3):
+            try:
+                print(f"качаем базу: {url} (попытка {attempt + 1})")
+                async with session.get(url, headers=headers, timeout=45, ssl=False) as response:
+                    if response.status == 200:
+                        text = await response.text(errors='ignore')
+                        for line in text.splitlines():
+                            clean_domain = parse_line(line)
+                            if clean_domain:
+                                domains.add(clean_domain)
+                        print(f"успешно скачано из {url}: {len(domains)} доменов")
+                        return domains
+                    else:
+                        print(f"ошибка HTTP {response.status} при скачивании {url}")
+            except Exception as e:
+                print(f"ошибка сети при скачивании {url}: {repr(e)}")
+
+            # Если упало, ждем 2 секунды перед следующей попыткой
+            if attempt < 2:
+                await asyncio.sleep(2)
+
     return domains
 
 async def fetch_all_async(urls_list):
     all_domains = set()
-    semaphore = asyncio.Semaphore(50) 
-    
+    # СНИЖАЕМ ЛИМИТ С 50 ДО 15, чтобы сервера не банили
+    semaphore = asyncio.Semaphore(15)
+
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    connector = aiohttp.TCPConnector(ssl=ssl_context, limit=50)
-    
+    connector = aiohttp.TCPConnector(ssl=ssl_context, limit=15)
+
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [fetch_url_async(session, url, semaphore) for url in urls_list]
         results = await asyncio.gather(*tasks)
-        
+
     for domains in results:
         all_domains.update(domains)
-        
+
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, collapse_subdomains, all_domains)
 
