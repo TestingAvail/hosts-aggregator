@@ -123,6 +123,13 @@ DOMAIN_LABEL = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
 ABP_DOMAIN_RULE = re.compile(r'^\|\|([^|^*$]+)\^$')
 ABP_HOST_ANCHOR = re.compile(r'^\|\|(?:\*\.)?([a-z0-9.-]+)(?:\^|/|\$)', re.IGNORECASE)
 ABP_URL_HOST_ANCHOR = re.compile(r'^\|https?://([a-z0-9.-]+)(?=[:/?^$|])', re.IGNORECASE)
+WEB_ONLY_ABP_OPTIONS = {
+    "script", "image", "stylesheet", "object", "xmlhttprequest", "subdocument",
+    "font", "media", "websocket", "ping", "other", "document", "third-party",
+    "popup", "popunder", "generichide", "elemhide", "specifichide", "sitekey",
+    "redirect", "redirect-rule", "removeparam", "csp", "header", "replace",
+    "permissions", "urlskip", "stealth", "domain",
+}
 
 def domains_overlap(first, second):
     """Whether either DNS zone is the same as, or an ancestor of, the other."""
@@ -255,6 +262,15 @@ def parse_extra_abp_rule(line_str):
         return None
     if any(ord(char) < 32 for char in rule):
         return None
+    # Cosmetic filters and browser resource-type filters have no DNS meaning.
+    # Keeping them in a router DNS list creates invalid noise or rules whose
+    # conditions the DNS engine cannot evaluate.
+    if any(marker in rule for marker in ('##', '#@#', '#?#', '#%#')):
+        return None
+    if '$' in rule:
+        options = rule.rsplit('$', 1)[1].lower().split(',')
+        if any(option.lstrip('~').split('=', 1)[0] in WEB_ONLY_ABP_OPTIONS for option in options):
+            return None
     # A domain whitelist alone cannot stop a scoped ABP rule from being
     # copied to the ABP output. Drop domain-anchored blockers that overlap
     # any protected zone; FORCE_BLOCK domains are emitted independently.
@@ -627,6 +643,9 @@ def stage_file(path, writer):
     try:
         with os.fdopen(fd, 'w', encoding='utf-8', newline='\n') as stream:
             writer(stream)
+        # mkstemp creates mode 0600; published blocklists must be readable by
+        # the web server or download client that serves them to routers.
+        os.chmod(temp_path, 0o644)
         return temp_path
     except Exception:
         try:
