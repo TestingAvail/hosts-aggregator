@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 import ssl
+import re
 
 # ==========================================
 # ИСХОДНЫЕ СПИСКИ (Ссылки на блоклисты)
@@ -151,11 +152,16 @@ FORCE_BLOCK = {
 # ==========================================
 # ЛОГИКА ОБРАБОТКИ
 # ==========================================
+
+# Регулярка для валидных доменных имён (буквы, цифры, дефисы, точки)
+DOMAIN_PATTERN = re.compile(r'^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$')
+
 def parse_line(line_str):
     line_str = line_str.strip()
     if not line_str or line_str.startswith("!") or line_str.startswith("#"):
         return None
 
+    # Убираем ABP-маркеры
     line_str = line_str.lstrip("|").rstrip("^")
     if "$" in line_str:
         line_str = line_str.split("$")[0]
@@ -171,6 +177,10 @@ def parse_line(line_str):
 
     domain = domain.lower().strip()
 
+    # Проверка на валидность домена (отсекает регулярки, пути и мусор)
+    if not DOMAIN_PATTERN.match(domain):
+        return None
+
     # 1. ПРИНУДИТЕЛЬНАЯ БЛОКИРОВКА
     if any(domain == fb or domain.endswith("." + fb) for fb in FORCE_BLOCK):
         return domain
@@ -184,9 +194,7 @@ def parse_line(line_str):
         return None
 
     # 4. Всё остальное блокируем
-    if domain and "." in domain and len(domain) < 253 and " " not in domain:
-        return domain
-    return None
+    return domain
 
 async def fetch_url_async(session, url, semaphore):
     domains = set()
