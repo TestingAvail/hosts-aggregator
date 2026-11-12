@@ -111,6 +111,10 @@ WHITELIST = {
     # RuTracker (и его статика)
     "rutracker.org", "rutracker.cc", "static.rutracker.cc",
 
+    "gamecontent.io",
+    "ws6.gamecontent.io",
+    "challenges.cloudflare.com",
+    
     # Проверка интернета (Captive Portal)
     "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients1.google.com",
     "clients3.google.com", "play.googleapis.com", "android.clients.google.com", "time.android.com",
@@ -141,6 +145,36 @@ FORCE_BLOCK = {
     # Трекеры Яндекса
     "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
     "piwik.opendesktop.org",
+
+    # --- DeepSeek / ByteDance (телеметрия) ---
+    "volces.com",
+    "gator.volces.com",
+    "portal101.cn",
+    "fp-it-acc.portal101.cn",
+
+     --- Глубинная аналитика ByteDance (DeepSeek) ---
+    "snssdk.com",
+    "byteoversea.com",
+    "pstatp.com",
+    "ibytedtos.com",
+
+    # --- Глубинная аналитика Alibaba (Qwen/AliExpress) ---
+    "aliapp.org",
+    "aplus.aliyun.com",
+    "log.alipay.com", 
+
+    # --- Firebase / Google Analytics ---
+    "app-measurement.com",
+    "firebase-settings.crashlytics.com",
+
+    # --- Мобильные трекеры (Appsflyer, Branch и др.) ---
+    "appsflyer.com",
+    "branch.io",
+    "kochava.com",
+
+    # --- Intercom (Виджет поддержки Claude - БЛОКИРУЕМ, если не нужна кнопка Help) ---
+    "intercom.io",
+    "intercomcdn.com",
 
     # Глобальные трекеры
     "googletagmanager.com", "www.googletagmanager.com",
