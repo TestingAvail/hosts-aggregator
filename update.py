@@ -1,21 +1,22 @@
 import asyncio
 import aiohttp
-import ssl
 import re
+import ipaddress
+import os
+import tempfile
+import sqlite3
+import codecs
 
 # ==========================================
-# ИСХОДНЫЕ СПИСКИ (Ссылки на блоклисты)
+# ИСХОДНЫЕ СПИСКИ
 # ==========================================
 FAT_URLS = [
-    # --- Базовые и региональные списки ---
     "https://big.oisd.nl/",
     "https://badmojr.github.io/1Hosts/Lite/hosts.txt",
-    "https://filters.adtidy.org/extension/ublock/filters/1.txt",   # AdGuard Russian
-    "https://filters.adtidy.org/extension/ublock/filters/2.txt",   # RU AdList (advblock)
-    "https://filters.adtidy.org/extension/ublock/filters/207.txt", # RU AdList: Counters
-    "https://filters.adtidy.org/extension/ublock/filters/6.txt",   # RU AdList: BitBlock
-    
-    # --- Списки от Hagezi ---
+    "https://filters.adtidy.org/extension/ublock/filters/1.txt",
+    "https://filters.adtidy.org/extension/ublock/filters/2.txt",
+    "https://filters.adtidy.org/extension/ublock/filters/207.txt",
+    "https://filters.adtidy.org/extension/ublock/filters/6.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.huawei-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.winoffice-onlydomains.txt",
@@ -23,14 +24,10 @@ FAT_URLS = [
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.samsung-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.tiktok.extended-onlydomains.txt",
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/native.xiaomi-onlydomains.txt",
-    
-    # --- Списки безопасности (обязательно) ---
     "https://ublockorigin.github.io/uAssets/filters/badware.txt",
     "https://phishing.army/download/phishing_army_blocklist_extended.txt",
     "https://v.firebog.net/hosts/RPiList-Malware.txt",
-    "https://v.firebog.net/hosts/RPiList-Phishing.txt", # <- Восстановленная ссылка!
-    
-    # --- Другие полезные списки ---
+    "https://v.firebog.net/hosts/RPiList-Phishing.txt",
     "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt",
     "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
     "https://adaway.org/hosts.txt",
@@ -41,46 +38,20 @@ FAT_URLS = [
 ]
 
 SLIM_URLS = [
-    # --- Базовые и региональные списки (самое важное) ---
-    "https://big.oisd.nl/", 
-    "https://filters.adtidy.org/extension/ublock/filters/2.txt",   # RU AdList
-    
-    # --- Списки от Hagezi (Pro - мощный, но стабильный) ---
-    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
-    
-    # --- Списки безопасности (обязательно) ---
+    "https://small.oisd.nl/",
+    "https://filters.adtidy.org/extension/ublock/filters/2.txt",
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/light-onlydomains.txt",
     "https://ublockorigin.github.io/uAssets/filters/badware.txt",
-    
-    # --- Дополнительно (по желанию, но очень полезно) ---
     "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
     "https://someonewhocares.org/hosts/zero/hosts"
 ]
 
-# ==========================================
-# БЕЛЫЙ СПИСОК (РАЗРЕШАЕМ РАБОТАТЬ)
-# ==========================================
-# ВАЖНО: Здесь только то, без чего сервисы сломаются.
-# Никаких трекеров здесь быть не должно!
 WHITELIST = {
-    # Базовое
     "localhost", "local", "broadcasthost", "ip6-localhost",
-
-    # ВК (сайт и приложение)
     "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
-
-    # Почта Mail.ru (без трекеров)
     "cloud.mail.ru", "mail.ru", "imgsmail.ru",
-
-    # YouTube (CDN)
     "yt3.ggpht.com", "redirector.googlevideo.com", "gstaticadssl.l.google.com",
-
-    # Spotify (CDN)
-    "audio-ak-spotify-com.akamaized.net",
-
-    # Сбербанк
-    "stat.online.sberbank.ru", "s3.amazonaws.com",
-
-    # DoH / DoT (чтобы DNS не сломался)
+    "audio-ak-spotify-com.akamaized.net", "stat.online.sberbank.ru", "s3.amazonaws.com",
     "dns.quad9.net", "dns10.quad9.net", "cloudflare-dns.com", "security.cloudflare-dns.com",
     "family.cloudflare-dns.com", "one.one.one.one", "1dot1dot1dot1.cloudflare-dns.com",
     "dns.google", "common.dot.dns.yandex.net", "safe.dot.dns.yandex.net", "family.dot.dns.yandex.net",
@@ -88,34 +59,16 @@ WHITELIST = {
     "eu.geohide.ru", "us.geohide.ru", "dns.malw.link", "dns.zapret.moed.webshiftvpn.ru",
     "dns.dagami.ru", "freedns.controld.com", "unfiltered.joindns4.eu", "protective.joindns4.eu",
     "child.joindns4.eu",
-
-    # TG WS Proxy
     "web.telegram.org", "pclead.co.uk", "offshor.co.uk", "cakeisalie.co.uk", "noskomnadzor.co.uk",
     "lovetrue.co.uk", "sorokdva.co.uk", "pyatdesyatdva.co.uk", "kartoshka.co.uk", "sorokodin.co.uk",
     "pyatdesyatodin.co.uk", "notelega.co.uk", "ebally.co.uk", "nebally.co.uk", "havegreatday.co.uk",
     "pomogite.co.uk", "fixtelega.co.uk", "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk",
     "nothingthere.co.uk",
-
-    # Qwen (включая домены авторизации и аккаунта)
-    "qwen.ai", "api.qwen.ai", "qwenlm.ai", 
-    "qwen.com", "auth.qwen.ai", "sg-entitlement.qwen.com", "sg-member.qwen.com",
-    
-    # Alibaba CDN (ВСЕ поддомены, которые грузят картинки и интерфейс Qwen)
-    "img.alicdn.com", "at.alicdn.com", "p.alicdn.com", 
-    "o.alicdn.com", "g.alicdn.com", "assets.alicdn.com",
-    "aliyunga0019.com",
-    
-    # API Alibaba Cloud (для работы Qwen)
+    "qwen.ai", "api.qwen.ai", "qwenlm.ai", "qwen.com", "auth.qwen.ai", "sg-entitlement.qwen.com", "sg-member.qwen.com",
+    "img.alicdn.com", "at.alicdn.com", "p.alicdn.com", "o.alicdn.com", "g.alicdn.com", "assets.alicdn.com", "aliyunga0019.com",
     "api.aliyuncs.com", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
-
-    # RuTracker (и его статика)
     "rutracker.org", "rutracker.cc", "static.rutracker.cc",
-
-    "gamecontent.io",
-    "ws6.gamecontent.io",
-    "challenges.cloudflare.com",
-    
-    # Проверка интернета (Captive Portal)
+    "gamecontent.io", "ws6.gamecontent.io", "challenges.cloudflare.com",
     "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients1.google.com",
     "clients3.google.com", "play.googleapis.com", "android.clients.google.com", "time.android.com",
     "time.google.com", "pool.ntp.org", "ntp.org", "connect.rom.miui.com",
@@ -125,77 +78,69 @@ WHITELIST = {
     "connectivity-check.ubuntu.com"
 }
 
-# ==========================================
-# ЧЕРНЫЙ СПИСОК (БЛОКИРУЕМ ВСЕГДА)
-# ==========================================
-# Эти домены блокируются, даже если их "родитель" в белом списке.
 FORCE_BLOCK = {
-    # Реклама и трекинг Alibaba
     "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
     "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
     "tanx.com", "alimama.com", "alibabadns.com",
-
-    # Аналитика Qwen
     "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
-    
-    # Реклама и трекеры ВК/Mail.ru
     "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
     "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
-    
-    # Трекеры Яндекса
-    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com",
-    "piwik.opendesktop.org",
-
-    # --- DeepSeek / ByteDance (телеметрия) ---
-    "volces.com",
-    "gator.volces.com",
-    "portal101.cn",
-    "fp-it-acc.portal101.cn",
-
-     --- Глубинная аналитика ByteDance (DeepSeek) ---
-    "snssdk.com",
-    "byteoversea.com",
-    "pstatp.com",
-    "ibytedtos.com",
-
-    # --- Глубинная аналитика Alibaba (Qwen/AliExpress) ---
-    "aliapp.org",
-    "aplus.aliyun.com",
-    "log.alipay.com", 
-
-    # --- Firebase / Google Analytics ---
-    "app-measurement.com",
-    "firebase-settings.crashlytics.com",
-
-    # --- Мобильные трекеры (Appsflyer, Branch и др.) ---
-    "appsflyer.com",
-    "branch.io",
-    "kochava.com",
-
-    # --- Intercom (Виджет поддержки Claude - БЛОКИРУЕМ, если не нужна кнопка Help) ---
-    "intercom.io",
-    "intercomcdn.com",
-
-    # Глобальные трекеры
-    "googletagmanager.com", "www.googletagmanager.com",
-    "doubleclick.net", "googleads.g.doubleclick.net",
-    "adjust.com", "adjust.world",
-    "ucweb.com", "tbcache.com", "fourier.taobao.com"
+    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com", "piwik.opendesktop.org",
+    "volces.com", "gator.volces.com", "portal101.cn", "fp-it-acc.portal101.cn",
+    "snssdk.com", "byteoversea.com", "pstatp.com", "ibytedtos.com",
+    "aliapp.org", "aplus.aliyun.com", "log.alipay.com", 
+    "aemetrics.aliexpress.ru", "fourier.aliexpress.com", "acjs.aliyun.com",
+    "mmstat.com", "ru.mmstat.com", "fourier.taobao.com",
+    "s-cdn.anthropic.com",
+    "app-measurement.com", "firebase-settings.crashlytics.com",
+    "googletagmanager.com", "www.googletagmanager.com", "doubleclick.net", "googleads.g.doubleclick.net",
+    "appsflyer.com", "branch.io", "kochava.com",
+    "intercom.io", "intercomcdn.com",
+    "adjust.com", "adjust.world", "app.adjust.com", "app.adjust.world",
+    "ucweb.com", "tbcache.com"
 }
 
 # ==========================================
-# ЛОГИКА ОБРАБОТКИ
+# ОПТИМИЗИРОВАННЫЕ СЕТЫ ДЛЯ ПРОВЕРКИ O(1)
 # ==========================================
+# Заранее вычисляем всех предков белого списка
+WHITELIST_PARENTS = set()
+for wl_domain in WHITELIST:
+    parts = wl_domain.split('.')
+    for i in range(1, len(parts)):
+        WHITELIST_PARENTS.add('.'.join(parts[i:]))
 
-# Регулярка для валидных доменных имён (буквы, цифры, дефисы, точки)
-DOMAIN_PATTERN = re.compile(r'^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$')
+# Поддержка обычных доменов и Punycode (xn--)
+DOMAIN_LABEL = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
+def valid_domain(value):
+    """Validate DNS names, including IDNA A-labels and newer numeric TLDs."""
+    if len(value) > 253 or not value:
+        return False
+    labels = value.split('.')
+    if len(labels) < 2 or any(not label or len(label) > 63 or not DOMAIN_LABEL.fullmatch(label) for label in labels):
+        return False
+    try:
+        # Reject malformed IDNA labels while accepting valid xn-- labels.
+        for label in labels:
+            if label.startswith('xn--'):
+                label.encode('ascii').decode('idna')
+    except (UnicodeError, ValueError):
+        return False
+    return True
 
 def parse_line(line_str):
     line_str = line_str.strip()
-    if not line_str or line_str.startswith("!") or line_str.startswith("#"):
+    # Comments are whole lines in hosts/ABP lists. Do not truncate valid data
+    # at an embedded # or ! character.
+    if not line_str or line_str.startswith(('#', '!', '[')):
         return None
 
-    # Убираем ABP-маркеры
+    # Strip inline comments only when separated from the rule by whitespace.
+    line_str = re.split(r'\s+[#!]', line_str, maxsplit=1)[0].strip()
+    if not line_str:
+        return None
+
+    # Очистка синтаксиса ABP
     line_str = line_str.lstrip("|").rstrip("^")
     if "$" in line_str:
         line_str = line_str.split("$")[0]
@@ -205,123 +150,401 @@ def parse_line(line_str):
         return None
 
     if parts[0] in ("0.0.0.0", "127.0.0.1") and len(parts) > 1:
-        domain = parts[1]
+        raw_domain = parts[1]
     else:
-        domain = parts[0]
+        raw_domain = parts[0]
 
-    domain = domain.lower().strip()
+    raw_domain = raw_domain.lower().strip().rstrip('.')
+    
+    if not raw_domain.isascii():
+        try:
+            raw_domain = raw_domain.encode('idna').decode('ascii')
+        except UnicodeError:
+            return None
 
-    # Проверка на валидность домена (отсекает регулярки, пути и мусор)
-    if not DOMAIN_PATTERN.match(domain):
+    # Hosts files can contain IPv6 literals; blocklists should keep only names.
+    try:
+        ipaddress.ip_address(raw_domain)
+        return None
+    except ValueError:
+        pass
+
+    if not valid_domain(raw_domain):
         return None
 
-    # 1. ПРИНУДИТЕЛЬНАЯ БЛОКИРОВКА
-    if any(domain == fb or domain.endswith("." + fb) for fb in FORCE_BLOCK):
-        return domain
+    domain_parts = raw_domain.split('.')
 
-    # 2. БЕЛЫЙ СПИСОК
-    if any(domain == wl or domain.endswith("." + wl) for wl in WHITELIST):
+    # 1. FORCE_BLOCK: проверяем совпадение или наличие родителя в FORCE_BLOCK
+    for i in range(len(domain_parts) - 1):
+        candidate = '.'.join(domain_parts[i:])
+        if candidate in FORCE_BLOCK:
+            return raw_domain
+
+    # 2. WHITELIST: проверяем совпадение или наличие родителя в WHITELIST
+    for i in range(len(domain_parts) - 1):
+        candidate = '.'.join(domain_parts[i:])
+        if candidate in WHITELIST:
+            return None
+
+    # 3. Защита родителей из WHITELIST (O(1) проверка)
+    if raw_domain in WHITELIST_PARENTS:
         return None
 
-    # 3. ЗАЩИТА ОТ ЛОМАНИЯ БЕЛЫХ ПОДДОМЕНОВ В ABP
-    if any(wl.endswith("." + domain) for wl in WHITELIST):
+    return raw_domain
+
+def parse_exception_line(line_str):
+    """Keep portable ABP exception rules instead of silently discarding them."""
+    rule = line_str.strip()
+    if not rule.startswith("@@") or len(rule) > 4096 or any(ord(char) < 32 for char in rule):
         return None
+    return rule
 
-    # 4. Всё остальное блокируем
-    return domain
+def parse_extra_abp_rule(line_str):
+    """Preserve ABP rules that cannot be represented as a plain host name."""
+    rule = line_str.strip()
+    if not rule or rule.startswith(('#', '!', '[')) or len(rule) > 4096:
+        return None
+    if any(ord(char) < 32 for char in rule):
+        return None
+    if any(marker in rule for marker in ('$','##','#@#','#?#','#%#','^')) or rule.startswith(('|', '/', '*')):
+        return rule
+    return None
 
-async def fetch_url_async(session, url, semaphore):
-    domains = set()
+def parse_subdomain_wildcard(line_str):
+    """Keep an explicit *.domain rule in ABP without turning it into a host apex block."""
+    rule = line_str.strip()
+    if "$" in rule:
+        return None  # scoped rules are preserved verbatim by parse_extra_abp_rule
+    if rule.startswith("||*."):
+        candidate = rule[4:].rstrip("^")
+    elif rule.startswith("*."):
+        candidate = rule[2:].rstrip("^")
+    else:
+        return None
+    domain = parse_line(candidate)
+    return f"||*.{domain}^" if domain else None
+
+def parse_domains_from_line(line_str):
+    """Return every hostname in a hosts mapping; ordinary rules yield 0/1."""
+    stripped = line_str.strip()
+    parts = stripped.split()
+    if len(parts) >= 2:
+        try:
+            ipaddress.ip_address(parts[0])
+            is_hosts_mapping = True
+        except ValueError:
+            is_hosts_mapping = False
+    else:
+        is_hosts_mapping = False
+    if is_hosts_mapping:
+        # Remove a trailing hosts-file comment, then keep all aliases.
+        names = []
+        for token in parts[1:]:
+            if token.startswith(('#', '!')):
+                break
+            domain = parse_line(token)
+            if domain:
+                names.append(domain)
+        return names
+    domain = parse_line(line_str)
+    return [domain] if domain else []
+
+class DomainStore:
+    """Disk-backed exact deduplication with a capped SQLite page cache."""
+    def __init__(self):
+        self.tempdir = tempfile.TemporaryDirectory(prefix="blocklist-build-")
+        self.db_path = os.path.join(self.tempdir.name, "domains.sqlite3")
+        self.db = sqlite3.connect(self.db_path)
+        self.db.execute("PRAGMA journal_mode=OFF")
+        self.db.execute("PRAGMA synchronous=OFF")
+        self.db.execute("PRAGMA temp_store=FILE")
+        self.db.execute("PRAGMA cache_size=-8192")  # 8 MiB SQLite cache
+        self.db.execute("CREATE TABLE domains (domain TEXT PRIMARY KEY) WITHOUT ROWID")
+        self.db.execute("CREATE TABLE exceptions (rule TEXT PRIMARY KEY) WITHOUT ROWID")
+        self.db.execute("CREATE TABLE extra_rules (rule TEXT PRIMARY KEY) WITHOUT ROWID")
+
+    def add_file(self, path):
+        before = self.db.total_changes
+        batch = []
+        with open(path, encoding="utf-8") as source:
+            for line in source:
+                domain = line.strip()
+                if domain:
+                    batch.append((domain,))
+                if len(batch) >= 2000:
+                    self.db.executemany("INSERT OR IGNORE INTO domains VALUES (?)", batch)
+                    batch.clear()
+        if batch:
+            self.db.executemany("INSERT OR IGNORE INTO domains VALUES (?)", batch)
+        self.db.commit()
+        return self.db.total_changes - before
+
+    def add_domains(self, domains):
+        self.db.executemany("INSERT OR IGNORE INTO domains VALUES (?)", ((d,) for d in domains))
+        self.db.commit()
+
+    def add_exception_file(self, path):
+        before = self.db.total_changes
+        batch = []
+        with open(path, encoding="utf-8") as source:
+            for line in source:
+                rule = line.rstrip("\n")
+                if rule:
+                    batch.append((rule,))
+                if len(batch) >= 1000:
+                    self.db.executemany("INSERT OR IGNORE INTO exceptions VALUES (?)", batch)
+                    batch.clear()
+        if batch:
+            self.db.executemany("INSERT OR IGNORE INTO exceptions VALUES (?)", batch)
+        self.db.commit()
+        return self.db.total_changes - before
+
+    def add_rule_file(self, path):
+        before = self.db.total_changes
+        batch = []
+        with open(path, encoding="utf-8") as source:
+            for line in source:
+                rule = line.rstrip("\n")
+                if rule:
+                    batch.append((rule,))
+                if len(batch) >= 1000:
+                    self.db.executemany("INSERT OR IGNORE INTO extra_rules VALUES (?)", batch)
+                    batch.clear()
+        if batch:
+            self.db.executemany("INSERT OR IGNORE INTO extra_rules VALUES (?)", batch)
+        self.db.commit()
+        return self.db.total_changes - before
+
+    def count(self):
+        return self.db.execute("SELECT COUNT(*) FROM domains").fetchone()[0]
+
+    def close(self):
+        self.db.close()
+        self.tempdir.cleanup()
+
+async def fetch_url_async(session, url, semaphore, spool_dir):
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:159.0) Gecko/20100101 Firefox/159.0",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br"
+        "Accept": "*/*"
     }
-
+    timeout = aiohttp.ClientTimeout(total=300, connect=20, sock_read=60)
     async with semaphore:
-        # Делаем до 3 попыток скачивания
         for attempt in range(3):
+            spool_path = None
+            exception_path = None
+            rules_path = None
             try:
-                print(f"качаем базу: {url} (попытка {attempt + 1})")
-                async with session.get(url, headers=headers, timeout=45, ssl=False) as response:
+                async with session.get(url, headers=headers, timeout=timeout) as response:
                     if response.status == 200:
-                        text = await response.text(errors='ignore')
-                        for line in text.splitlines():
-                            clean_domain = parse_line(line)
-                            if clean_domain:
-                                domains.add(clean_domain)
-                        print(f"успешно скачано из {url}: {len(domains)} доменов")
-                        return domains
-                    else:
-                        print(f"ошибка HTTP {response.status} при скачивании {url}")
+                        if "text/html" in response.headers.get("Content-Type", "").lower():
+                            raise ValueError("вместо списка получена HTML-страница")
+                        fd, spool_path = tempfile.mkstemp(prefix="source-", suffix=".txt", dir=spool_dir)
+                        exception_fd, exception_path = tempfile.mkstemp(prefix="exceptions-", suffix=".txt", dir=spool_dir)
+                        rules_fd, rules_path = tempfile.mkstemp(prefix="rules-", suffix=".txt", dir=spool_dir)
+                        line_count = count = exception_count = extra_count = wildcard_count = 0
+                        decoder = codecs.getincrementaldecoder("utf-8")("ignore")
+                        pending = ""
+                        skipping_long_line = False
+                        with os.fdopen(fd, "w", encoding="utf-8") as spool, os.fdopen(exception_fd, "w", encoding="utf-8") as exception_spool, os.fdopen(rules_fd, "w", encoding="utf-8") as rules_spool:
+                            async for chunk in response.content.iter_chunked(65536):
+                                pending += decoder.decode(chunk)
+                                if skipping_long_line:
+                                    if "\n" not in pending:
+                                        pending = ""
+                                        continue
+                                    pending = pending.split("\n", 1)[1]
+                                    skipping_long_line = False
+                                lines = pending.split("\n")
+                                pending = lines.pop()
+                                for line in lines:
+                                    line_count += 1
+                                    exception = parse_exception_line(line)
+                                    if exception:
+                                        exception_spool.write(exception + "\n")
+                                        exception_count += 1
+                                        continue
+                                    if len(line) > 65536:
+                                        continue
+                                    stripped_line = line.strip()
+                                    if stripped_line.startswith(("||*.", "*.")) and "$" not in stripped_line:
+                                        wildcard = parse_subdomain_wildcard(stripped_line)
+                                        if wildcard:
+                                            rules_spool.write(wildcard + "\n")
+                                            wildcard_count += 1
+                                            extra_count += 1
+                                        continue
+                                    # Scope-modified ABP rules must stay ABP rules;
+                                    # converting them to hosts would broaden them.
+                                    if "$" in line:
+                                        extra = parse_extra_abp_rule(line)
+                                        if extra:
+                                            rules_spool.write(extra + "\n")
+                                            extra_count += 1
+                                        continue
+                                    parsed_domains = parse_domains_from_line(line.rstrip("\r"))
+                                    for domain in parsed_domains:
+                                        spool.write(domain + "\n")
+                                        count += 1
+                                    if not parsed_domains:
+                                        extra = parse_extra_abp_rule(line)
+                                        if extra:
+                                            rules_spool.write(extra + "\n")
+                                            extra_count += 1
+                                if len(pending) > 65536:
+                                    pending = ""
+                                    skipping_long_line = True
+                            pending += decoder.decode(b"", final=True)
+                            if pending:
+                                line_count += 1
+                                exception = parse_exception_line(pending)
+                                if exception:
+                                    exception_spool.write(exception + "\n")
+                                    exception_count += 1
+                                elif len(pending) <= 65536:
+                                    stripped_pending = pending.strip()
+                                    if stripped_pending.startswith(("||*.", "*.")) and "$" not in stripped_pending:
+                                        wildcard = parse_subdomain_wildcard(stripped_pending)
+                                        if wildcard:
+                                            rules_spool.write(wildcard + "\n")
+                                            wildcard_count += 1
+                                            extra_count += 1
+                                    elif "$" in pending:
+                                        extra = parse_extra_abp_rule(pending)
+                                        if extra:
+                                            rules_spool.write(extra + "\n")
+                                            extra_count += 1
+                                    else:
+                                        parsed_domains = parse_domains_from_line(pending.rstrip("\r"))
+                                        for domain in parsed_domains:
+                                            spool.write(domain + "\n")
+                                            count += 1
+                                        if not parsed_domains:
+                                            extra = parse_extra_abp_rule(pending)
+                                            if extra:
+                                                rules_spool.write(extra + "\n")
+                                                extra_count += 1
+                        if count + exception_count + extra_count == 0:
+                            raise ValueError("источник пуст или не содержит распознанных доменов")
+                        print(f"{url}: строк {line_count}, доменов {count}, ABP-правил только для поддоменов {wildcard_count}, прочих правил ABP {extra_count - wildcard_count}, исключений {exception_count}")
+                        return spool_path, exception_path, rules_path
+                    raise aiohttp.ClientResponseError(
+                        response.request_info, response.history,
+                        status=response.status, message="HTTP error", headers=response.headers
+                    )
             except Exception as e:
-                print(f"ошибка сети при скачивании {url}: {repr(e)}")
-
-            # Если упало, ждем 2 секунды перед следующей попыткой
+                if spool_path and os.path.exists(spool_path):
+                    os.unlink(spool_path)
+                if exception_path and os.path.exists(exception_path):
+                    os.unlink(exception_path)
+                if rules_path and os.path.exists(rules_path):
+                    os.unlink(rules_path)
+                if attempt == 2:
+                    print(f"Сбой скачивания {url}: {e}")
             if attempt < 2:
                 await asyncio.sleep(2)
-
-    return domains
+    raise RuntimeError(f"Источник недоступен после 3 попыток: {url}")
 
 async def fetch_all_async(urls_list):
-    all_domains = set()
-    # СНИЖАЕМ ЛИМИТ С 50 ДО 15, чтобы сервера не банили
+    store = DomainStore()
     semaphore = asyncio.Semaphore(15)
+    connector = aiohttp.TCPConnector(limit=15)
+    try:
+        async with aiohttp.ClientSession(connector=connector) as session:
+            tasks = [fetch_url_async(session, url, semaphore, store.tempdir.name) for url in urls_list]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+        failures = [result for result in results if isinstance(result, Exception)]
+        if failures:
+            raise RuntimeError(f"Не загружено источников: {len(failures)}/{len(urls_list)}; файлы не будут перезаписаны") from failures[0]
 
-    connector = aiohttp.TCPConnector(ssl=ssl_context, limit=15)
+        total_inserted = exception_total = rules_total = 0
+        for spool_path, exception_path, rules_path in results:
+            total_inserted += store.add_file(spool_path)
+            exception_total += store.add_exception_file(exception_path)
+            rules_total += store.add_rule_file(rules_path)
+            os.unlink(spool_path)
+            os.unlink(exception_path)
+            os.unlink(rules_path)
+        force_domains = [parse_line(domain) for domain in FORCE_BLOCK]
+        store.add_domains(d for d in force_domains if d)
+        print(f"Уникальных доменов: {store.count()} (новых из источников: {total_inserted}); ABP-правил с условиями: {rules_total}; исключений: {exception_total}")
+        if total_inserted == 0 or store.count() == 0:
+            raise RuntimeError("Источники не вернули ни одного домена; файлы не будут перезаписаны")
+        return store
+    except Exception:
+        store.close()
+        raise
 
-    async with aiohttp.ClientSession(connector=connector) as session:
-        tasks = [fetch_url_async(session, url, semaphore) for url in urls_list]
-        results = await asyncio.gather(*tasks)
+def save_files(store, hosts_name, abp_name, title_prefix):
+    # 1. hosts.txt
+    print(f"Формируем {hosts_name}...")
+    hosts_temp = abp_temp = None
+    try:
+        hosts_temp = stage_file(hosts_name, lambda stream: write_hosts(store, stream, title_prefix))
+        abp_temp = stage_file(abp_name, lambda stream: write_abp(store, stream, title_prefix))
+        os.replace(hosts_temp, hosts_name)
+        hosts_temp = None
+        os.replace(abp_temp, abp_name)
+        abp_temp = None
+    finally:
+        for path in (hosts_temp, abp_temp):
+            if path and os.path.exists(path):
+                os.unlink(path)
+    print(f"Сохранено записей hosts: {store.count()}")
 
-    for domains in results:
-        all_domains.update(domains)
+def write_hosts(store, stream, title_prefix):
+    stream.write(f"# optimized hosts file ({title_prefix})\n")
+    stream.write("# Exact names only; hosts cannot represent ABP options, exceptions, or subdomain wildcards.\n\n")
+    cursor = store.db.execute("SELECT domain FROM domains ORDER BY domain")
+    for (domain,) in cursor:
+        stream.write(f"0.0.0.0 {domain}\n")
 
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, collapse_subdomains, all_domains)
-
-def collapse_subdomains(domains_set):
-    print("схлопываем вложенные поддомены для разгрузки роутера...")
-    sorted_domains = sorted(list(domains_set), key=len)
-    result = set()
-    for domain in sorted_domains:
+def write_abp(store, stream, title_prefix):
+    stream.write(f"[Adblock Plus]\n! Title: Hosts Aggregator ABP List ({title_prefix})\n\n")
+    cursor = store.db.execute("SELECT domain FROM domains ORDER BY length(domain), domain")
+    count = 0
+    for (domain,) in cursor:
         parts = domain.split('.')
-        is_sub = False
+        covered = False
         for i in range(1, len(parts)):
             parent = '.'.join(parts[i:])
-            if parent in result:
-                is_sub = True
+            if store.db.execute("SELECT 1 FROM domains WHERE domain=?", (parent,)).fetchone():
+                covered = True
                 break
-        if not is_sub:
-            result.add(domain)
-    print(f"после схлопывания осталось уникальных правил: {len(result)}")
-    return sorted(list(result))
+        if not covered:
+            stream.write(f"||{domain}^\n")
+            count += 1
+    print(f"Сохранено ABP правил после удаления покрытых поддоменов: {count}")
+    for (rule,) in store.db.execute("SELECT rule FROM extra_rules ORDER BY rule"):
+        stream.write(rule + "\n")
+    for (rule,) in store.db.execute("SELECT rule FROM exceptions ORDER BY rule"):
+        stream.write(rule + "\n")
 
-def save_files(domains, hosts_name, abp_name, title_prefix):
-    print(f"сохраняем {len(domains)} доменов в {hosts_name}")
-    with open(hosts_name, "w", encoding="utf-8") as f:
-        f.write(f"# optimized mega hosts file ({title_prefix})\n\n")
-        for domain in domains:
-            f.write(f"0.0.0.0 {domain}\n")
-
-    print(f"сохраняем ABP список в {abp_name}")
-    with open(abp_name, "w", encoding="utf-8") as f:
-        f.write(f"[Adblock Plus]\n! Title: Hosts Aggregator ABP List ({title_prefix})\n! Description: Lean and mean blocklist\n\n")
-        for domain in domains:
-            f.write(f"||{domain}^\n")
+def stage_file(path, writer):
+    directory = os.path.dirname(os.path.abspath(path))
+    fd, temp_path = tempfile.mkstemp(prefix='.blocklist-', dir=directory, text=True)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8', newline='\n') as stream:
+            writer(stream)
+        return temp_path
+    except Exception:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass
+        raise
 
 if __name__ == "__main__":
-    print("--- сборка FAT версии ---")
+    print("--- Сборка FAT версии ---")
     fat_domains = asyncio.run(fetch_all_async(FAT_URLS))
-    if fat_domains:
+    try:
         save_files(fat_domains, "hosts.txt", "abp.txt", "FAT")
+    finally:
+        fat_domains.close()
     
-    print("\n--- сборка SLIM версии ---")
+    print("\n--- Сборка SLIM версии ---")
     slim_domains = asyncio.run(fetch_all_async(SLIM_URLS))
-    if slim_domains:
+    try:
         save_files(slim_domains, "hosts-slim.txt", "abp-slim.txt", "SLIM")
+    finally:
+        slim_domains.close()
