@@ -50,10 +50,31 @@ GOOGLE_PROTECTED_ZONES = {
     "google.com", "googleapis.com", "gstatic.com", "googleusercontent.com",
 }
 
+# Explicit exceptions for cases where a source misses a known ad/tracker zone.
+FORCE_BLOCK = {
+    "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
+    "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
+    "tanx.com", "alimama.com", "alibabadns.com",
+    "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
+    "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
+    "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
+    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com", "piwik.opendesktop.org",
+    "volces.com", "gator.volces.com", "portal101.cn", "fp-it-acc.portal101.cn",
+    "snssdk.com", "byteoversea.com", "pstatp.com", "ibytedtos.com",
+    "aliapp.org", "aplus.aliyun.com", "log.alipay.com",
+    "aemetrics.aliexpress.ru", "fourier.aliexpress.com", "acjs.aliyun.com",
+    "mmstat.com", "ru.mmstat.com", "fourier.taobao.com",
+    "s-cdn.anthropic.com",
+    "app-measurement.com", "firebase-settings.crashlytics.com",
+    "googletagmanager.com", "www.googletagmanager.com", "doubleclick.net", "googleads.g.doubleclick.net",
+    "appsflyer.com", "branch.io", "kochava.com",
+    "intercom.io", "intercomcdn.com",
+    "adjust.com", "adjust.world", "app.adjust.com", "app.adjust.world",
+    "ucweb.com", "tbcache.com"
+}
+
 WHITELIST = {
-    # These zones protect the apex and all descendants in both generated
-    # formats: hosts records are filtered before insertion, while ABP rules
-    # are filtered or receive explicit exceptions below.
+    # Protect these zones from imported blocklist entries in both outputs.
     *GOOGLE_PROTECTED_ZONES,
     "localhost", "local", "broadcasthost", "ip6-localhost",
     "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
@@ -84,28 +105,6 @@ WHITELIST = {
     "www.qualcomm.cn", "captive.apple.com", "time.apple.com", "www.msftconnecttest.com",
     "www.msftncsi.com", "time.windows.com", "detectportal.firefox.com", "nmcheck.gnome.org",
     "connectivity-check.ubuntu.com"
-}
-
-FORCE_BLOCK = {
-    "alimama.alicdn.com", "aecpm.alicdn.com", "afp.alicdn.com", "afpmm.alicdn.com",
-    "log.aliyuncs.com", "arms.aliyuncs.com", "beacon-api.aliyuncs.com", "click.aliyun.com",
-    "tanx.com", "alimama.com", "alibabadns.com",
-    "aplus.qwen.ai", "ss.qwen.ai", "ut.qwen.ai",
-    "ads.vk.ru", "ad.vk.ru", "trk.vk.ru", "mtrk.vk.ru", "tracer.vk.ru",
-    "ads.mail.ru", "ad.mail.ru", "trk.mail.ru",
-    "yabs.yandex.ru", "redirect.appmetrica.yandex.com", "s.click.aliexpress.com", "piwik.opendesktop.org",
-    "volces.com", "gator.volces.com", "portal101.cn", "fp-it-acc.portal101.cn",
-    "snssdk.com", "byteoversea.com", "pstatp.com", "ibytedtos.com",
-    "aliapp.org", "aplus.aliyun.com", "log.alipay.com", 
-    "aemetrics.aliexpress.ru", "fourier.aliexpress.com", "acjs.aliyun.com",
-    "mmstat.com", "ru.mmstat.com", "fourier.taobao.com",
-    "s-cdn.anthropic.com",
-    "app-measurement.com", "firebase-settings.crashlytics.com",
-    "googletagmanager.com", "www.googletagmanager.com", "doubleclick.net", "googleads.g.doubleclick.net",
-    "appsflyer.com", "branch.io", "kochava.com",
-    "intercom.io", "intercomcdn.com",
-    "adjust.com", "adjust.world", "app.adjust.com", "app.adjust.world",
-    "ucweb.com", "tbcache.com"
 }
 
 # ==========================================
@@ -181,23 +180,30 @@ def parse_line(line_str):
     if not line_str:
         return None
 
-    # Convert only the canonical, domain-wide ABP form.  Broadly stripping
-    # pipes/carets (or cutting at '$') can turn malformed or scoped filters
-    # into a wider plain-domain block.  Scoped/complex rules are handled by
-    # parse_extra_abp_rule and remain ABP rules.
+    # Only exact domains, hosts mappings, and canonical domain-wide ABP
+    # rules have an unambiguous DNS equivalent. Reject all other syntax.
     abp_match = ABP_DOMAIN_RULE.fullmatch(line_str)
     if abp_match:
         line_str = abp_match.group(1)
-    elif any(marker in line_str for marker in ("|", "^", "$", "*")):
+    elif any(marker in line_str for marker in ("|", "^", "$", "*", "#")) or line_str.startswith('@@'):
         return None
 
     parts = line_str.split()
     if not parts:
         return None
 
-    if parts[0] in ("0.0.0.0", "127.0.0.1") and len(parts) > 1:
+    try:
+        ipaddress.ip_address(parts[0])
+        is_hosts_mapping = len(parts) > 1
+    except ValueError:
+        is_hosts_mapping = False
+    if is_hosts_mapping:
         raw_domain = parts[1]
     else:
+        # A plain DNS source line must contain exactly one domain. This keeps
+        # arbitrary tokens and malformed filter syntax from becoming blocks.
+        if len(parts) != 1:
+            return None
         raw_domain = parts[0]
 
     raw_domain = raw_domain.lower().strip().rstrip('.')
@@ -220,13 +226,16 @@ def parse_line(line_str):
 
     domain_parts = raw_domain.split('.')
 
-    # 1. FORCE_BLOCK: проверяем совпадение или наличие родителя в FORCE_BLOCK
-    for i in range(len(domain_parts) - 1):
-        candidate = '.'.join(domain_parts[i:])
-        if candidate in FORCE_BLOCK:
-            return raw_domain
+    # Explicit blocks take precedence over false-positive allowlist entries.
+    if any(
+        raw_domain == forced or raw_domain.endswith('.' + forced)
+        for forced in FORCE_BLOCK
+    ):
+        return raw_domain
 
-    # 2. WHITELIST: проверяем совпадение или наличие родителя в WHITELIST
+    # Protect exact allowlist entries, descendants, and parent zones.
+    if raw_domain in WHITELIST:
+        return None
     for i in range(len(domain_parts) - 1):
         candidate = '.'.join(domain_parts[i:])
         if candidate in WHITELIST:
@@ -239,62 +248,16 @@ def parse_line(line_str):
     return raw_domain
 
 def parse_exception_line(line_str):
-    """Keep portable ABP exception rules instead of silently discarding them."""
-    rule = line_str.strip()
-    if not rule.startswith("@@") or len(rule) > 4096 or any(ord(char) < 32 for char in rule):
-        return None
-    # An exception can otherwise cancel a FORCE_BLOCK rule in ABP engines.
-    # Drop anchored exceptions that overlap a forced zone; the forced domain
-    # is emitted independently from the domains table.
-    host = anchored_rule_host(rule)
-    if host and any(domains_overlap(host, forced) for forced in FORCE_BLOCK):
-        return None
-    return rule
+    """DNS blocklists have no exception syntax, so discard ABP exceptions."""
+    return None
 
 def parse_extra_abp_rule(line_str):
-    """Preserve ABP rules that cannot be represented as a plain host name."""
-    rule = line_str.strip()
-    if not rule or rule.startswith(('#', '!', '[')) or len(rule) > 4096:
-        return None
-    # Exceptions have their own policy path.  In particular, a rejected
-    # exception must never fall through and be re-added as an ordinary rule.
-    if rule.startswith('@@'):
-        return None
-    if any(ord(char) < 32 for char in rule):
-        return None
-    # Cosmetic filters and browser resource-type filters have no DNS meaning.
-    # Keeping them in a router DNS list creates invalid noise or rules whose
-    # conditions the DNS engine cannot evaluate.
-    if any(marker in rule for marker in ('##', '#@#', '#?#', '#%#')):
-        return None
-    if '$' in rule:
-        options = rule.rsplit('$', 1)[1].lower().split(',')
-        if any(option.lstrip('~').split('=', 1)[0] in WEB_ONLY_ABP_OPTIONS for option in options):
-            return None
-    # A domain whitelist alone cannot stop a scoped ABP rule from being
-    # copied to the ABP output. Drop domain-anchored blockers that overlap
-    # any protected zone; FORCE_BLOCK domains are emitted independently.
-    host = anchored_rule_host(rule)
-    if host:
-        if any(domains_overlap(host, zone) for zone in WHITELIST):
-            return None
-    if any(marker in rule for marker in ('$','##','#@#','#?#','#%#','^')) or rule.startswith(('|', '/', '*')):
-        return rule
+    """Discard ABP rules that cannot be represented as exact DNS names."""
     return None
 
 def parse_subdomain_wildcard(line_str):
-    """Keep an explicit *.domain rule in ABP without turning it into a host apex block."""
-    rule = line_str.strip()
-    if "$" in rule:
-        return None  # scoped rules are preserved verbatim by parse_extra_abp_rule
-    if rule.startswith("||*."):
-        candidate = rule[4:].rstrip("^")
-    elif rule.startswith("*."):
-        candidate = rule[2:].rstrip("^")
-    else:
-        return None
-    domain = parse_line(candidate)
-    return f"||*.{domain}^" if domain else None
+    """Wildcards are not emitted into exact-domain DNS or hosts lists."""
+    return None
 
 def parse_domains_from_line(line_str):
     """Return every hostname in a hosts mapping; ordinary rules yield 0/1."""
@@ -537,9 +500,9 @@ async def fetch_all_async(urls_list):
             os.unlink(spool_path)
             os.unlink(exception_path)
             os.unlink(rules_path)
-        force_domains = [parse_line(domain) for domain in FORCE_BLOCK]
-        store.add_domains(d for d in force_domains if d)
-        print(f"Уникальных доменов: {store.count()} (новых из источников: {total_inserted}); ABP-правил с условиями: {rules_total}; исключений: {exception_total}")
+        forced_domains = (parse_line(domain) for domain in FORCE_BLOCK)
+        store.add_domains(domain for domain in forced_domains if domain)
+        print(f"Уникальных доменов: {store.count()} (новых из источников: {total_inserted})")
         if total_inserted == 0 or store.count() == 0:
             raise RuntimeError("Источники не вернули ни одного домена; файлы не будут перезаписаны")
         return store
@@ -604,14 +567,14 @@ def save_files(store, hosts_name, abp_name, title_prefix):
     print(f"Сохранено записей hosts: {store.count()}")
 
 def write_hosts(store, stream, title_prefix):
-    stream.write(f"# optimized hosts file ({title_prefix})\n")
-    stream.write("# Exact names only; hosts cannot represent ABP options, exceptions, or subdomain wildcards.\n\n")
+    stream.write(f"# Hosts blocklist ({title_prefix})\n")
+    stream.write("# Exact domain names only.\n\n")
     cursor = store.db.execute("SELECT domain FROM domains ORDER BY domain")
     for (domain,) in cursor:
         stream.write(f"0.0.0.0 {domain}\n")
 
 def write_abp(store, stream, title_prefix):
-    stream.write(f"[Adblock Plus]\n! Title: Hosts Aggregator ABP List ({title_prefix})\n\n")
+    stream.write(f"! Title: Hosts Aggregator DNS Filter ({title_prefix})\n! Format: AdGuard Home-compatible domain rules\n\n")
     cursor = store.db.execute("SELECT domain FROM domains ORDER BY length(domain), domain")
     count = 0
     for (domain,) in cursor:
@@ -625,17 +588,7 @@ def write_abp(store, stream, title_prefix):
         if not covered:
             stream.write(f"||{domain}^\n")
             count += 1
-    print(f"Сохранено ABP правил после удаления покрытых поддоменов: {count}")
-    for (rule,) in store.db.execute("SELECT rule FROM extra_rules ORDER BY rule"):
-        stream.write(rule + "\n")
-    for (rule,) in store.db.execute("SELECT rule FROM exceptions ORDER BY rule"):
-        stream.write(rule + "\n")
-    # A plain-domain whitelist is applied while importing domains, but ABP
-    # rules with modifiers are retained verbatim in extra_rules.  Add explicit
-    # exceptions so those source rules cannot block Google account/core zones.
-    # FORCE_BLOCK entries are independent ad/tracker domains and remain intact.
-    for domain in sorted(GOOGLE_PROTECTED_ZONES):
-        stream.write(f"@@||{domain}^\n")
+    print(f"Сохранено DNS-правил для AdGuard Home после удаления покрытых поддоменов: {count}")
 
 def stage_file(path, writer):
     directory = os.path.dirname(os.path.abspath(path))
