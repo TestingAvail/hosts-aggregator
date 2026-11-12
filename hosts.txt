@@ -1,5 +1,5 @@
-# optimized hosts file (FAT)
-# Exact names only; hosts cannot represent ABP options, exceptions, or subdomain wildcards.
+# Hosts blocklist (FAT)
+# Exact domain names only.
 
 0.0.0.0 0--4.com
 0.0.0.0 0--9-9-8---7-77-7-7-6--65-5--4-3-3-3-2-1.com
@@ -563561,7 +563561,6 @@
 0.0.0.0 drmartenspairs.fr
 0.0.0.0 drmartensparis.fr
 0.0.0.0 drmartenss.fr
-0.0.0.0 drmartenssale.online
 0.0.0.0 drmartensslovenia.com
 0.0.0.0 drmartenssoldesfrance.fr
 0.0.0.0 drmartenssouthafrica.com
@@ -572152,7 +572151,6 @@
 0.0.0.0 e8e354.icefactory.cl
 0.0.0.0 e8e6fc48d4.c2dbb597b0.com
 0.0.0.0 e8eaf546-a7b4-4d26-bc0a-3a71131d21c3.prmutv.co
-0.0.0.0 e8f3zj.615284709.cfd
 0.0.0.0 e8fa10e4-3f1a-4506-90be-0da7dacceafa.edge.permutive.app
 0.0.0.0 e8fcd6.arcadejafet.cl
 0.0.0.0 e8gwhwefgi187h.rest
@@ -968600,7 +968598,6 @@
 0.0.0.0 panel-calls.my
 0.0.0.0 panel-cdn.yektanet.com
 0.0.0.0 panel-cn.com
-0.0.0.0 panel-cyber-folks.ruquier.org
 0.0.0.0 panel-dateintrictional.help
 0.0.0.0 panel-home-pl.spot-bitmart.info
 0.0.0.0 panel-home-pl.studionaty.com
@@ -1406809,7 +1406806,6 @@
 0.0.0.0 vinted.673590124.sbs
 0.0.0.0 vinted.6778643.lat
 0.0.0.0 vinted.6781214.me
-0.0.0.0 vinted.678240915.cfd
 0.0.0.0 vinted.6892132.org
 0.0.0.0 vinted.68975430.lol
 0.0.0.0 vinted.6987643.lat
@@ -1407817,7 +1407813,6 @@
 0.0.0.0 vinted.order506.me
 0.0.0.0 vinted.order52168-records.com
 0.0.0.0 vinted.order54235982.shop
-0.0.0.0 vinted.order593.com
 0.0.0.0 vinted.order74816.shop
 0.0.0.0 vinted.order7482.biz
 0.0.0.0 vinted.order8178.me
@@ -1438466,7 +1438461,6 @@
 0.0.0.0 webcarkicevir-hediyelerini-aktar.com
 0.0.0.0 webcarkicevir-hediyeleritopla.com
 0.0.0.0 webcash.nl
-0.0.0.0 webcashleads.com
 0.0.0.0 webcashmaker.com
 0.0.0.0 webcasinozone.com
 0.0.0.0 webcast.1897pentagram.com

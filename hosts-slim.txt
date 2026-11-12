@@ -1,5 +1,5 @@
-# optimized hosts file (SLIM)
-# Exact names only; hosts cannot represent ABP options, exceptions, or subdomain wildcards.
+# Hosts blocklist (SLIM)
+# Exact domain names only.
 
 0.0.0.0 0--d.com
 0.0.0.0 0-02.net
