@@ -46,7 +46,15 @@ SLIM_URLS = [
     "https://someonewhocares.org/hosts/zero/hosts"
 ]
 
+GOOGLE_PROTECTED_ZONES = {
+    "google.com", "googleapis.com", "gstatic.com", "googleusercontent.com",
+}
+
 WHITELIST = {
+    # These zones protect the apex and all descendants in both generated
+    # formats: hosts records are filtered before insertion, while ABP rules
+    # are filtered or receive explicit exceptions below.
+    *GOOGLE_PROTECTED_ZONES,
     "localhost", "local", "broadcasthost", "ip6-localhost",
     "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
     "cloud.mail.ru", "mail.ru", "imgsmail.ru",
@@ -112,6 +120,32 @@ for wl_domain in WHITELIST:
 
 # Поддержка обычных доменов и Punycode (xn--)
 DOMAIN_LABEL = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
+ABP_DOMAIN_RULE = re.compile(r'^\|\|([^|^*$]+)\^$')
+ABP_HOST_ANCHOR = re.compile(r'^\|\|(?:\*\.)?([a-z0-9.-]+)(?:\^|/|\$)', re.IGNORECASE)
+ABP_URL_HOST_ANCHOR = re.compile(r'^\|https?://([a-z0-9.-]+)(?=[:/?^$|])', re.IGNORECASE)
+
+def domains_overlap(first, second):
+    """Whether either DNS zone is the same as, or an ancestor of, the other."""
+    return first == second or first.endswith('.' + second) or second.endswith('.' + first)
+
+def anchored_rule_host(rule):
+    """Extract an ABP domain anchor, including one after an exception prefix."""
+    candidate = rule[2:] if rule.startswith('@@') else rule
+    match = ABP_HOST_ANCHOR.match(candidate) or ABP_URL_HOST_ANCHOR.match(candidate)
+    if not match:
+        return None
+    host = match.group(1).lower().rstrip('.')
+    labels = host.split('.')
+    # ABP may anchor to a single label such as "com" or "ru".  Those are
+    # not accepted as imported DNS domains, but must be recognized here so a
+    # broad filter cannot evade whitelist/force overlap checks.
+    if len(host) > 253 or any(
+        not label or len(label) > 63 or not DOMAIN_LABEL.fullmatch(label)
+        for label in labels
+    ):
+        return None
+    return host
+
 def valid_domain(value):
     """Validate DNS names, including IDNA A-labels and newer numeric TLDs."""
     if len(value) > 253 or not value:
@@ -140,10 +174,15 @@ def parse_line(line_str):
     if not line_str:
         return None
 
-    # Очистка синтаксиса ABP
-    line_str = line_str.lstrip("|").rstrip("^")
-    if "$" in line_str:
-        line_str = line_str.split("$")[0]
+    # Convert only the canonical, domain-wide ABP form.  Broadly stripping
+    # pipes/carets (or cutting at '$') can turn malformed or scoped filters
+    # into a wider plain-domain block.  Scoped/complex rules are handled by
+    # parse_extra_abp_rule and remain ABP rules.
+    abp_match = ABP_DOMAIN_RULE.fullmatch(line_str)
+    if abp_match:
+        line_str = abp_match.group(1)
+    elif any(marker in line_str for marker in ("|", "^", "$", "*")):
+        return None
 
     parts = line_str.split()
     if not parts:
@@ -197,6 +236,12 @@ def parse_exception_line(line_str):
     rule = line_str.strip()
     if not rule.startswith("@@") or len(rule) > 4096 or any(ord(char) < 32 for char in rule):
         return None
+    # An exception can otherwise cancel a FORCE_BLOCK rule in ABP engines.
+    # Drop anchored exceptions that overlap a forced zone; the forced domain
+    # is emitted independently from the domains table.
+    host = anchored_rule_host(rule)
+    if host and any(domains_overlap(host, forced) for forced in FORCE_BLOCK):
+        return None
     return rule
 
 def parse_extra_abp_rule(line_str):
@@ -204,8 +249,19 @@ def parse_extra_abp_rule(line_str):
     rule = line_str.strip()
     if not rule or rule.startswith(('#', '!', '[')) or len(rule) > 4096:
         return None
+    # Exceptions have their own policy path.  In particular, a rejected
+    # exception must never fall through and be re-added as an ordinary rule.
+    if rule.startswith('@@'):
+        return None
     if any(ord(char) < 32 for char in rule):
         return None
+    # A domain whitelist alone cannot stop a scoped ABP rule from being
+    # copied to the ABP output. Drop domain-anchored blockers that overlap
+    # any protected zone; FORCE_BLOCK domains are emitted independently.
+    host = anchored_rule_host(rule)
+    if host:
+        if any(domains_overlap(host, zone) for zone in WHITELIST):
+            return None
     if any(marker in rule for marker in ('$','##','#@#','#?#','#%#','^')) or rule.startswith(('|', '/', '*')):
         return rule
     return None
@@ -476,19 +532,58 @@ async def fetch_all_async(urls_list):
         raise
 
 def save_files(store, hosts_name, abp_name, title_prefix):
-    # 1. hosts.txt
     print(f"Формируем {hosts_name}...")
-    hosts_temp = abp_temp = None
+    staged = {}
+    backups = {}
+    published = []
+    preserve_backups = False
     try:
-        hosts_temp = stage_file(hosts_name, lambda stream: write_hosts(store, stream, title_prefix))
-        abp_temp = stage_file(abp_name, lambda stream: write_abp(store, stream, title_prefix))
-        os.replace(hosts_temp, hosts_name)
-        hosts_temp = None
-        os.replace(abp_temp, abp_name)
-        abp_temp = None
+        staged[hosts_name] = stage_file(
+            hosts_name, lambda stream: write_hosts(store, stream, title_prefix)
+        )
+        staged[abp_name] = stage_file(
+            abp_name, lambda stream: write_abp(store, stream, title_prefix)
+        )
+
+        # Stage both complete outputs before touching either published file.
+        # Keep same-directory backups so a failure during the second rename
+        # can restore the previous pair instead of leaving mixed generations.
+        for target in staged:
+            if os.path.lexists(target):
+                directory = os.path.dirname(os.path.abspath(target))
+                fd, backup = tempfile.mkstemp(prefix='.blocklist-backup-', dir=directory)
+                os.close(fd)
+                os.unlink(backup)
+                os.replace(target, backup)
+                backups[target] = backup
+
+        for target, temp_path in staged.items():
+            os.replace(temp_path, target)
+            staged[target] = None
+            published.append(target)
+    except Exception:
+        for target in published:
+            try:
+                os.unlink(target)
+            except FileNotFoundError:
+                pass
+        rollback_errors = []
+        for target, backup in backups.items():
+            try:
+                os.replace(backup, target)
+                backups[target] = None
+            except OSError as error:
+                rollback_errors.append(f"{target}: {error}")
+        if rollback_errors:
+            preserve_backups = True
+            raise RuntimeError(
+                "Не удалось полностью откатить публикацию файлов; резервные копии сохранены: "
+                + "; ".join(rollback_errors)
+            )
+        raise
     finally:
-        for path in (hosts_temp, abp_temp):
-            if path and os.path.exists(path):
+        for path in (*staged.values(), *backups.values()):
+            if path and os.path.exists(path) and not (preserve_backups and path in backups.values()):
                 os.unlink(path)
     print(f"Сохранено записей hosts: {store.count()}")
 
@@ -519,6 +614,12 @@ def write_abp(store, stream, title_prefix):
         stream.write(rule + "\n")
     for (rule,) in store.db.execute("SELECT rule FROM exceptions ORDER BY rule"):
         stream.write(rule + "\n")
+    # A plain-domain whitelist is applied while importing domains, but ABP
+    # rules with modifiers are retained verbatim in extra_rules.  Add explicit
+    # exceptions so those source rules cannot block Google account/core zones.
+    # FORCE_BLOCK entries are independent ad/tracker domains and remain intact.
+    for domain in sorted(GOOGLE_PROTECTED_ZONES):
+        stream.write(f"@@||{domain}^\n")
 
 def stage_file(path, writer):
     directory = os.path.dirname(os.path.abspath(path))
