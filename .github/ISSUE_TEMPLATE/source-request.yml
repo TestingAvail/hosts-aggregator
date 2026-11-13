@@ -1,0 +1,52 @@
+name: Suggest a blocklist source
+description: Propose a maintained, relevant source for the aggregator.
+title: "Source suggestion: "
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Direct list URL
+      description: Prefer a stable HTTPS raw/download URL, not a homepage.
+    validations:
+      required: true
+  - type: input
+    id: project
+    attributes:
+      label: Project / maintainer
+    validations:
+      required: true
+  - type: textarea
+    id: categories
+    attributes:
+      label: What does it cover?
+      description: Ads, trackers, malware, phishing, telemetry, etc.
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: List format
+      description: Hosts, plain domains, AdGuard domain rules, or another format.
+    validations:
+      required: true
+  - type: input
+    id: maintenance
+    attributes:
+      label: Evidence of maintenance
+      description: Link to recent releases, update timestamps, or commit history.
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License / reuse terms
+      description: Link to the project's license or terms.
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Expected unique contribution
+      description: Explain why this source adds value beyond HaGeZi, OISD, StevenBlack, GoodbyeAds and Phishing Army.
+    validations:
+      required: true

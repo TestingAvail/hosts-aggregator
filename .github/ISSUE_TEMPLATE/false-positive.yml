@@ -1,0 +1,63 @@
+name: False positive report
+description: Report a domain that is incorrectly blocked by an aggregate list.
+title: "False positive: "
+body:
+  - type: input
+    id: domain
+    attributes:
+      label: Affected domain
+      description: Enter the exact hostname that is being blocked.
+      placeholder: service.example.com
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Affected profile
+      options:
+        - FAT
+        - SLIM
+        - Both
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Affected format
+      options:
+        - hosts.txt
+        - abp.txt
+        - hosts-slim.txt
+        - abp-slim.txt
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: Router / DNS software
+      placeholder: AdGuard Home, dnsmasq, Pi-hole, OpenWrt...
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: What is broken?
+      description: Include the affected app/site and reproducible symptoms.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source from build-report.json
+      description: Include the source name if you identified it.
+    validations:
+      required: false
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Provide a safe reproduction or relevant DNS lookup output. Do not include private network details or secrets.
+    validations:
+      required: false
