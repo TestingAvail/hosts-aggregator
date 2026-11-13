@@ -362,9 +362,11 @@ async def fetch_url_async(session, url, semaphore, spool_dir):
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:159.0) Gecko/20100101 Firefox/159.0",
         "Accept": "*/*"
     }
-    timeout = aiohttp.ClientTimeout(total=300, connect=20, sock_read=60)
+    # Some large community lists pause for over a minute while generating or
+    # serving data. Keep a finite per-source deadline, but tolerate those gaps.
+    timeout = aiohttp.ClientTimeout(total=900, connect=30, sock_read=180)
     async with semaphore:
-        for attempt in range(3):
+        for attempt in range(4):
             spool_path = None
             exception_path = None
             rules_path = None
@@ -473,11 +475,10 @@ async def fetch_url_async(session, url, semaphore, spool_dir):
                     os.unlink(exception_path)
                 if rules_path and os.path.exists(rules_path):
                     os.unlink(rules_path)
-                if attempt == 2:
-                    print(f"Сбой скачивания {url}: {e}")
-            if attempt < 2:
-                await asyncio.sleep(2)
-    raise RuntimeError(f"Источник недоступен после 3 попыток: {url}")
+                print(f"Сбой скачивания {url} (попытка {attempt + 1}/4): {e}")
+            if attempt < 3:
+                await asyncio.sleep(min(2 ** attempt, 8))
+    raise RuntimeError(f"Источник недоступен после 4 попыток: {url}")
 
 async def fetch_all_async(urls_list):
     store = DomainStore()
