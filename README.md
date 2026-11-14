@@ -23,7 +23,6 @@ The latest Release contains the same four files, `build-report.json`, `SHA256SUM
 - HaGeZi Pro++ wildcard domains and legacy hosts expansion.
 - HaGeZi TIF Medium.
 - OISD Big.
-- AdAway hosts (CC BY 3.0; its hosts-file content last changed in 2023, so its contribution is monitored).
 - NoCoin hosts (MIT).
 - AdGuard DNS from r-a-y/mobile-hosts (GPL-3.0; large composite feed).
 
@@ -32,7 +31,6 @@ The latest Release contains the same four files, `build-report.json`, `SHA256SUM
 - HaGeZi Light wildcard domains and legacy hosts expansion.
 - HaGeZi TIF Mini.
 - OISD Small.
-- AdAway hosts.
 - NoCoin hosts.
 
 OISD Big and Small are alternatives, not layers. HaGeZi's legacy hosts expansion enumerates known subdomains only; use the AdGuard output where wildcard support is available.
@@ -45,7 +43,7 @@ Each active source has a recorded license identifier, license URL, attribution a
 
 The generated outputs are **multi-source data collections**, not blanket MIT-licensed datasets. Preserve the individual source terms and attribution. Do not assume that a publicly reachable URL grants redistribution rights.
 
-The source list from the Schakal 4PDA post was reviewed as a candidate inventory, not copied as a feed. Sources with no clear public redistribution grant (including user-maintained 4PDA lists) are documented in [SOURCE-CANDIDATES.md](SOURCE-CANDIDATES.md) and are not ingested into public builds.
+The source list from the Schakal 4PDA post was reviewed as a candidate inventory, not copied as a feed. AdAway has clear CC BY 3.0 terms but is kept as a separate candidate rather than mixed into the GPL-based aggregate until the licensing of the transformed combined dataset is reviewed. Sources with no clear public redistribution grant (including user-maintained 4PDA lists) are documented in [SOURCE-CANDIDATES.md](SOURCE-CANDIDATES.md) and are not ingested into public builds.
 
 ## Rule semantics and compatibility
 

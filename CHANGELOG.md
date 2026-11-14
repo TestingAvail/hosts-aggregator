@@ -3,7 +3,7 @@
 ## 5.0.0
 
 - Remove Schakal, GoodbyeAds, StevenBlack Unified and Phishing Army from active public profiles until their full redistribution rights and upstream provenance are verified.
-- Add licensed AdAway, NoCoin and r-a-y/mobile-hosts AdGuard DNS inputs with per-source license IDs, license URLs and attribution.
+- Add NoCoin and r-a-y/mobile-hosts AdGuard DNS inputs with per-source license IDs, license URLs and attribution; document AdAway separately rather than mixing its CC BY 3.0 data into the GPL-based aggregate.
 - Fail closed before downloads when an active public source lacks approved redistribution metadata.
 - Record license identifiers and attribution per source in the build report and per-domain provenance map.
 - Add a candidate register for feeds named in the Schakal 4PDA post; personal lists without a redistribution grant remain disabled.

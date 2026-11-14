@@ -81,8 +81,7 @@ class ParserSemanticsTests(unittest.TestCase):
         sources = {source.id: source for source in update.FAT_SOURCES + update.SLIM_SOURCES}
         self.assertEqual(sources["oisd-big"].default_scope, update.SCOPE_TREE)
         self.assertEqual(sources["oisd-small"].default_scope, update.SCOPE_TREE)
-        self.assertEqual(sources["adaway"].license_id, "CC-BY-3.0")
-        self.assertIn("Kicelo and Dominik Schuermann", sources["adaway"].attribution)
+        self.assertNotIn("adaway", sources)
         self.assertEqual(sources["nocoin"].license_id, "MIT")
         self.assertEqual(sources["r-a-y-adguard-dns"].license_id, "GPL-3.0")
         self.assertNotIn("schakal-full-hosts", sources)

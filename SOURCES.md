@@ -10,7 +10,6 @@ This is the authoritative register for feeds actually used by public builds. Eac
 | `hagezi-pro-plus-hosts` | [HaGeZi Pro++ legacy hosts](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/pro.plus.txt) | hosts / exact | GPL-3.0 | HaGeZi contributors | approved with attribution |
 | `hagezi-tif-medium` | [HaGeZi TIF Medium](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.medium-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
 | `oisd-big` | [OISD Big](https://big.oisd.nl/domainswild) | `domainswild` / tree | GPL-3.0 | OISD contributors | approved with attribution |
-| `adaway` | [AdAway hosts](https://adaway.org/hosts.txt) | hosts / exact | CC BY 3.0 | AdAway contributors (including Kicelo and Dominik Schuermann) | approved with attribution |
 | `nocoin` | [NoCoin hosts](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt) | hosts / exact | MIT | Hosh (hoshsadiq) | approved with attribution |
 | `r-a-y-adguard-dns` | [AdGuard DNS (r-a-y/mobile-hosts)](https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt) | mixed DNS filter syntax | GPL-3.0 | r-a-y/mobile-hosts and documented upstream authors | approved with attribution |
 
@@ -22,19 +21,22 @@ This is the authoritative register for feeds actually used by public builds. Eac
 | `hagezi-light-hosts` | [HaGeZi Light legacy hosts](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/light.txt) | hosts / exact | GPL-3.0 | HaGeZi contributors | approved with attribution |
 | `hagezi-tif-mini` | [HaGeZi TIF Mini](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.mini-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
 | `oisd-small` | [OISD Small](https://small.oisd.nl/domainswild) | `domainswild` / tree | GPL-3.0 | OISD contributors | approved with attribution |
-| `adaway` | [AdAway hosts](https://adaway.org/hosts.txt) | hosts / exact | CC BY 3.0 | AdAway contributors (including Kicelo and Dominik Schuermann) | approved with attribution |
 | `nocoin` | [NoCoin hosts](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt) | hosts / exact | MIT | Hosh (hoshsadiq) | approved with attribution |
 
 ## License references and caveats
 
 - **HaGeZi:** [upstream license](https://github.com/hagezi/dns-blocklists/blob/main/LICENSE). The published lists are GPL-3.0. Some underlying third-party inputs may have separate terms; this project consumes the published HaGeZi feeds.
 - **OISD:** [upstream repository](https://github.com/sjhgvr/oisd). OISD identifies its published data under GPL-3.0. Re-check current upstream terms before changing versions or use.
-- **AdAway:** the work is titled *AdAway default blocklist*; its header credits Kicelo and Dominik Schuermann and points to [CC Attribution 3.0](https://creativecommons.org/licenses/by/3.0/). The aggregate retains that attribution, links the license and identifies the source as modified by parsing, normalization and deduplication. Its hosts.txt content history shows the latest content change on 2023-04-29, so its freshness and unique contribution must be monitored.
+- **AdAway (not in active profiles):** the work is titled *AdAway default blocklist*; its header credits Kicelo and Dominik Schuermann and points to [CC Attribution 3.0](https://creativecommons.org/licenses/by/3.0/). The list is publicly reusable under its own terms, but this project keeps it separate from the GPL-based aggregate until the obligations for a transformed mixed-license file are reviewed. Its hosts.txt content history shows the latest content change on 2023-04-29.
 - **NoCoin:** the hosts feed points to MIT, and the upstream repository contains an MIT license. The upstream copyright and permission notice is preserved in [licenses/MIT-NoCoin.txt](licenses/MIT-NoCoin.txt). Its hosts.txt file was updated on 2026-09-12.
 - **r-a-y/mobile-hosts:** the repository declares GPL-3.0. Its README describes AdGuard DNS as a DNS-oriented composite built from AdGuard, EasyList, EasyPrivacy, ABPindo and hostsVN inputs. This project attributes the aggregator and its documented upstream authors.
 - **Generated outputs:** each output combines data under different source licenses. This repository does not publish a single blanket license for the combined data. The original builder code remains MIT under root LICENSE; data rights remain source-specific.
 
 All active source feeds are transformed: entries are parsed, unsupported syntax is discarded, domains are normalized, and duplicate records are deduplicated. The build report and source map disclose the source and license associated with each accepted entry. This project does not imply endorsement by upstream authors.
+
+## Separate, inactive candidates
+
+- [AdAway default blocklist](https://adaway.org/hosts.txt) — CC BY 3.0; attribution to Kicelo and Dominik Schuermann; last observed source-content change 2023-04-29. It is documented but not included in FAT/SLIM.
 
 ## Scope policy
 

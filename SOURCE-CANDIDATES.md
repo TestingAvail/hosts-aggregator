@@ -4,7 +4,7 @@ This is a review queue, not a feed configuration. A URL being public or linked f
 
 | Candidate from the post | Decision | Reason / next step |
 |---|---|---|
-| AdAway | Included | The feed itself states CC BY 3.0 and provides attribution. Its hosts-file content last changed 2023-04-29, so contribution and freshness are monitored. |
+| [AdAway](https://adaway.org/hosts.txt) | Separate candidate; not in combined profiles | CC BY 3.0 permits reuse with attribution, but it is kept separate from the GPL-based aggregate until mixed-license adaptation/distribution is reviewed. The header credits Kicelo and Dominik Schuermann; content last changed 2023-04-29. |
 | Dan Pollock / someonewhocares | Excluded | Marked inactive in the supplied post. StevenBlack's source inventory describes its terms as non-commercial with attribution. Do not mirror without confirming current permission. |
 | Peter Lowe | Excluded pending permission | uBlock's license overview identifies McRae GPL, non-commercial. A public free feed is not sufficient evidence of redistribution permission for this aggregate. |
 | Malware Domain List | Excluded | The supplied post marks the domain/feed as expired. No current maintained canonical feed was confirmed. |

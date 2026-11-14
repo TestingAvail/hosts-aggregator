@@ -105,13 +105,6 @@ FAT_SOURCES = [
         attribution="OISD contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
-        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
-        SCOPE_EXACT, False, "mobile-ads-trackers",
-        "Feed declares CC BY 3.0. Last observed hosts-file content commit: 2023-04-29; retain only while measured contribution justifies it.",
-        license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
-        attribution="AdAway contributors (including Kicelo and Dominik Schuermann)", redistribution_status="approved_with_attribution",
-    ),
-    Source(
         "nocoin", "NoCoin Filter List",
         "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
         SCOPE_EXACT, False, "cryptomining",
@@ -161,13 +154,6 @@ SLIM_SOURCES = [
         "Small wildcard-domain list; Big and Small are alternatives, not layers.",
         license_id="GPL-3.0", license_url="https://github.com/sjhgvr/oisd/blob/master/LICENSE",
         attribution="OISD contributors", redistribution_status="approved_with_attribution",
-    ),
-    Source(
-        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
-        SCOPE_EXACT, False, "mobile-ads-trackers",
-        "CC BY 3.0 feed; last observed hosts-file content commit 2023-04-29.",
-        license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
-        attribution="AdAway contributors (including Kicelo and Dominik Schuermann)", redistribution_status="approved_with_attribution",
     ),
     Source(
         "nocoin", "NoCoin Filter List",
