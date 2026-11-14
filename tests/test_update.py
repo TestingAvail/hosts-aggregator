@@ -82,6 +82,7 @@ class ParserSemanticsTests(unittest.TestCase):
         self.assertEqual(sources["oisd-big"].default_scope, update.SCOPE_TREE)
         self.assertEqual(sources["oisd-small"].default_scope, update.SCOPE_TREE)
         self.assertEqual(sources["adaway"].license_id, "CC-BY-3.0")
+        self.assertIn("Kicelo and Dominik Schuermann", sources["adaway"].attribution)
         self.assertEqual(sources["nocoin"].license_id, "MIT")
         self.assertEqual(sources["r-a-y-adguard-dns"].license_id, "GPL-3.0")
         self.assertNotIn("schakal-full-hosts", sources)
@@ -112,7 +113,10 @@ class ParserSemanticsTests(unittest.TestCase):
             "www.baihe.com", "jobs.sciencecareers.org", "cardlytics.com",
             "s.youtube.com", "piwik.opendesktop.org",
             "hl-img.peco.uodoo.com", "browser.cloud.ucweb.com",
-            "mini50.opera-mini.net",
+            "mini50.opera-mini.net", "yt3.ggpht.com", "suggestqueries.google.com",
+            "redirector.googlevideo.com", "gstaticadssl.l.google.com",
+            "audio-ak-spotify-com.akamaized.net", "stat.online.sberbank.ru",
+            "s3.amazonaws.com",
         )
         for host in hosts:
             with self.subTest(host=host):

@@ -12,16 +12,16 @@ This is a review queue, not a feed configuration. A URL being public or linked f
 | hpHosts | Excluded | The supplied post says maintenance ended on 2020-03-30. |
 | NoCoin | Included | Hosts feed declares MIT; upstream hosts.txt had a commit on 2026-09-12. |
 | Energized Spark | Excluded | The supplied post reports too many false positives. |
-| VLADIK2000 YouTube list | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
-| Exodus (MimiKatze) | Excluded pending permission | The forum list is a separate user-maintained list. Do not infer that it inherits the official Exodus Privacy database license. |
-| Xiaomi (MimiKatze) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. HaGeZi tiers already include Native Tracker categories, so a separate feed needs a measured unique contribution. |
-| nasgern host list | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
-| nasgern Pi-hole list | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
-| raletag list | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
-| RussianRice list | Excluded pending permission | Personal forum contribution; its purpose relates to visitor IP tracking; rights and exact feed format need confirmation. |
-| Flyme (Anton29000) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
+| [VLADIK2000 YouTube list](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=92500131) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
+| [Exodus (MimiKatze)](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=88755109) | Excluded pending permission | The forum list is a separate user-maintained list. Do not infer that it inherits the official Exodus Privacy database license. |
+| [Xiaomi (MimiKatze)](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89667643) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. HaGeZi tiers already include Native Tracker categories, so a separate feed needs a measured unique contribution. |
+| [nasgern host list](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89709018) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
+| [nasgern Pi-hole list](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89779555) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
+| [raletag list](https://4pda.to/forum/index.php?showtopic=275091&view=findpost&p=62522395) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
+| [RussianRice list](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=98500074) | Excluded pending permission | Personal forum contribution; its purpose relates to visitor IP tracking; rights and exact feed format need confirmation. |
+| [Flyme (Anton29000)](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=97669523) | Excluded pending permission | Personal forum contribution; no explicit open redistribution license was supplied. |
 | AdGuard DNS (r-a-y/mobile-hosts) | Included | Upstream repository declares GPL-3.0 and documents source families; included in FAT only due to size and broad scope. |
-| Schakal's own findings | Excluded pending permission | The source owner has not published a clear redistribution grant in the material reviewed. |
+| [Schakal's own findings](https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=98664750) | Excluded pending permission | The source owner has not published a clear redistribution grant in the material reviewed. |
 
 ## Additional source notes
 

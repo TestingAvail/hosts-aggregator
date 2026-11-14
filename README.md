@@ -41,7 +41,7 @@ OISD Big and Small are alternatives, not layers. HaGeZi's legacy hosts expansion
 
 The root `LICENSE` applies to the original builder code and documentation only. It does **not** relicense third-party feed data or generated blocklists.
 
-Each active source has a recorded license identifier, license URL, attribution and redistribution status in [SOURCES.md](SOURCES.md). Public builds fail closed unless every configured source has an explicitly approved public-redistribution status. The build report records these fields per source, and the compressed source map records the license and attribution for every source-derived domain.
+Each active source has a recorded license identifier, license URL, attribution and redistribution status in [SOURCES.md](SOURCES.md). Imported entries are parsed, normalized, filtered to DNS-compatible records and deduplicated into a modified aggregate; they are not verbatim mirrors. Public builds fail closed unless every configured source has an explicitly approved public-redistribution status. The build report records these fields per source, and the compressed source map records the license and attribution for every source-derived domain.
 
 The generated outputs are **multi-source data collections**, not blanket MIT-licensed datasets. Preserve the individual source terms and attribution. Do not assume that a publicly reachable URL grants redistribution rights.
 

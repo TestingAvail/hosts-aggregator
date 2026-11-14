@@ -109,7 +109,7 @@ FAT_SOURCES = [
         SCOPE_EXACT, False, "mobile-ads-trackers",
         "Feed declares CC BY 3.0. Last observed hosts-file content commit: 2023-04-29; retain only while measured contribution justifies it.",
         license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
-        attribution="AdAway contributors", redistribution_status="approved_with_attribution",
+        attribution="AdAway contributors (including Kicelo and Dominik Schuermann)", redistribution_status="approved_with_attribution",
     ),
     Source(
         "nocoin", "NoCoin Filter List",
@@ -1094,6 +1094,7 @@ def write_hosts(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write("# Exact hostnames only. Tree-feed roots and all known expanded hosts are listed.\n")
     stream.write("# Hosts format cannot block unknown/dynamic subdomains.\n")
     stream.write("# Generated automatically; do not edit manually.\n")
+    stream.write("# Imported entries are normalized and deduplicated into this modified aggregate.\n")
     stream.write("# Data licenses and attribution are per-source; the root LICENSE covers code only.\n")
     stream.write("# Sources: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
     count = 0
@@ -1108,6 +1109,7 @@ def write_adguard(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write("! Format: AdGuard DNS filtering syntax\n")
     stream.write("! ||domain^ = domain and all subdomains; bare domain = exact hostname only.\n")
     stream.write("! Generated automatically; do not edit manually.\n")
+    stream.write("! Imported entries are normalized and deduplicated into this modified aggregate.\n")
     stream.write("! Data licenses and attribution are per-source; the root LICENSE covers code only.\n")
     stream.write("! Sources: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
 
