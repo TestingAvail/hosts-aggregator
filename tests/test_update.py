@@ -14,7 +14,6 @@ import update
 
 class ParserSemanticsTests(unittest.TestCase):
     def test_plain_domain_scope_is_source_declared(self):
-    def test_plain_domain_scope_is_source_declared(self):
         self.assertEqual(
             update.parse_source_line("ads.example.test", update.SCOPE_EXACT),
             [("ads.example.test", update.SCOPE_EXACT)],
