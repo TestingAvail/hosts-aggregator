@@ -13,6 +13,16 @@ class ReleasePruningTests(unittest.TestCase):
         old = select_releases_to_delete(releases, keep=2)
         self.assertEqual([x["tag_name"] for x in old], ["hosts-aggregator-old"])
 
+    def test_legacy_automated_release_tags_are_still_managed(self):
+        releases = [
+            {"id": 1, "tag_name": "hosts-1-1", "published_at": "2026-01-01T00:00:00Z"},
+            {"id": 2, "tag_name": "hosts-3-1", "published_at": "2026-03-01T00:00:00Z"},
+            {"id": 3, "tag_name": "hosts-aggregator-new", "published_at": "2026-04-01T00:00:00Z"},
+            {"id": 4, "tag_name": "hosts-manual-not-a-build", "published_at": "2019-01-01T00:00:00Z"},
+        ]
+        old = select_releases_to_delete(releases, keep=2)
+        self.assertEqual([x["tag_name"] for x in old], ["hosts-1-1"])
+
     def test_unrelated_and_manual_releases_are_never_pruned(self):
         releases = [
             {"id": 1, "tag_name": "hosts-aggregator-old", "published_at": "2020-01-01T00:00:00Z"},
