@@ -121,7 +121,7 @@ class ParserSemanticsTests(unittest.TestCase):
         self.assertEqual(update.parse_source_line("mini5abc.opera-mini.net", update.SCOPE_TREE), [("mini5abc.opera-mini.net", update.SCOPE_TREE)])
         self.assertEqual(update.parse_source_line("opera-mini.net", update.SCOPE_TREE), [("opera-mini.net", update.SCOPE_TREE)])
         self.assertEqual(update.parse_source_line("other.opera-mini.net"), [("other.opera-mini.net", update.SCOPE_EXACT)])
-        self.assertEqual(update.parse_source_line("opera-mini.net", update.SCOPE_TREE), [])
+        self.assertEqual(update.parse_source_line("opera-mini.net", update.SCOPE_TREE), [("opera-mini.net", update.SCOPE_TREE)])
 
     def test_manual_legitimate_samples_are_allowed(self):
         self.assertEqual(update.parse_source_line("www.baihe.com"), [])
@@ -184,9 +184,9 @@ class OutputSemanticsTests(unittest.TestCase):
     def test_manual_exceptions_survive_tree_rules_in_both_outputs(self):
         manual_path = Path(self.tmp.name) / "manual.tsv"
         manual_path.write_text(
-            "tree\\tcardlytics.com\\n"
-            "tree\\ts3.amazonaws.com\\n"
-            "tree\\tmini5abc.opera-mini.net\\n",
+            "tree\tcardlytics.com\n"
+            "tree\ts3.amazonaws.com\n"
+            "tree\tmini5abc.opera-mini.net\n",
             encoding="utf-8",
         )
         self.store.add_source_file("manual", manual_path)
@@ -198,15 +198,15 @@ class OutputSemanticsTests(unittest.TestCase):
         host_text = hosts.getvalue()
         adguard_text = adguard.getvalue()
 
-        self.assertNotIn("0.0.0.0 cardlytics.com\\n", host_text)
-        self.assertNotIn("0.0.0.0 s3.amazonaws.com\\n", host_text)
-        self.assertNotIn("0.0.0.0 mini5abc.opera-mini.net\\n", host_text)
-        self.assertIn("||cardlytics.com^\\n", adguard_text)
-        self.assertIn("||s3.amazonaws.com^\\n", adguard_text)
-        self.assertIn("||mini5abc.opera-mini.net^\\n", adguard_text)
-        self.assertIn("@@cardlytics.com\\n", adguard_text)
-        self.assertIn("@@s3.amazonaws.com\\n", adguard_text)
-        self.assertIn("@@||mini5*.opera-mini.net^\\n", adguard_text)
+        self.assertNotIn("0.0.0.0 cardlytics.com\n", host_text)
+        self.assertNotIn("0.0.0.0 s3.amazonaws.com\n", host_text)
+        self.assertNotIn("0.0.0.0 mini5abc.opera-mini.net\n", host_text)
+        self.assertIn("||cardlytics.com^\n", adguard_text)
+        self.assertIn("||s3.amazonaws.com^\n", adguard_text)
+        self.assertIn("||mini5abc.opera-mini.net^\n", adguard_text)
+        self.assertIn("@@cardlytics.com\n", adguard_text)
+        self.assertIn("@@s3.amazonaws.com\n", adguard_text)
+        self.assertIn("@@||mini5*.opera-mini.net^\n", adguard_text)
 
     def test_output_headers_include_only_contributing_source_notices(self):
         manual_path = Path(self.tmp.name) / "notices.tsv"
