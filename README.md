@@ -23,7 +23,7 @@ Release assets (latest successful release):
 - <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/hosts-slim.txt>
 - <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/abp-slim.txt>
 
-The release additionally includes `build-report.json`, `SHA256SUMS`, and `source-map.tsv.gz` (source-level provenance for audits). `SHA256SUMS` covers the four router files and `build-report.json`; the compressed source map has its own SHA-256 recorded in the report. The build report and source map are not router blocklists.
+The release additionally includes `build-report.json`, `SHA256SUMS`, `source-map.tsv.gz`, `sources.json`, `SOURCES.md`, `DATA-LICENSING.md`, and third-party license notices. `SHA256SUMS` covers the four router files and `build-report.json`; the compressed source map has its own SHA-256 recorded in the report. The build report and source map are not router blocklists.
 
 ## Profiles
 
@@ -31,18 +31,15 @@ The release additionally includes `build-report.json`, `SHA256SUMS`, and `source
 
 A high-coverage profile for routers with sufficient memory/CPU:
 
-- HaGeZi Multi Pro++ wildcard-domain feed.
-- HaGeZi Pro++ legacy hosts expansion, to enumerate known subdomains for the hosts output.
-- HaGeZi TIF Medium (larger threat companion for the high-capacity FAT profile).
+- HaGeZi Pro++ wildcard-domain feed.
+- HaGeZi Pro++ legacy hosts expansion for known subdomains in the hosts output.
+- HaGeZi TIF Medium threat-intelligence companion.
 - OISD Big in its `domainswild` format.
-- GoodbyeAds.
-- StevenBlack Unified.
-- Phishing Army canonical Adblock feed (tenant-host scoped, with subdomain coverage).
-- Schakal full global hosts feed, imported as exact hostnames only.
+- AdAway hosts for mobile ads and analytics.
+- Peter Lowe's Ad and Tracking Server List.
+- NoCoin hosts for browser-based cryptomining (FAT only; the upstream file reports a 2025-03-05 data timestamp).
 
-FAT is intentionally aggressive and memory-heavier: TIF Medium is substantially larger than TIF Mini. Use it only on higher-capacity routers; for AdGuard Home, HaGeZi notes that TIF Medium needs at least 1 GB RAM. It can still block legitimate/dual-use services. Review the source list and maintain local exceptions where necessary.
-
-Schakal is included in FAT by default as an exact-host supplemental feed, so it contributes to the published aggregate instead of needing to be layered on separately. Its entries are never widened to parent-domain tree rules. The list is publicly available, but the reviewed forum post did not identify an explicit open redistribution license; source URL and attribution are recorded in `SOURCES.md`, and the repository owner should verify or obtain redistribution permission. A manual workflow run can disable it with `include_schakal=false`.
+FAT is intentionally aggressive and memory-heavier. TIF Medium is substantially larger than TIF Mini. Use it only on higher-capacity routers; for AdGuard Home, HaGeZi notes that TIF Medium needs at least 1 GB RAM. It can still block legitimate or dual-use services, so test it on a subset of devices.
 
 ### SLIM
 
@@ -50,10 +47,13 @@ A smaller compatibility-oriented profile:
 
 - HaGeZi Light wildcard-domain feed.
 - HaGeZi Light legacy hosts expansion.
-- HaGeZi TIF Mini (compact threat-intelligence companion for constrained hardware).
-- OISD Small in `domainswild` format.
+- HaGeZi TIF Mini.
+- OISD Small in its `domainswild` format.
+- AdAway hosts.
+- Peter Lowe's Ad and Tracking Server List.
+- NoCoin hosts.
 
-OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM now includes TIF Mini so its smaller footprint does not mean dropping threat-intelligence coverage entirely; check the actual memory use on the weakest router before switching it on everywhere.
+OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM keeps the smaller HaGeZi Light tier and TIF Mini while sharing the three direct supplemental feeds above.
 
 ## Important rule semantics
 
@@ -66,7 +66,6 @@ Source formats are interpreted explicitly:
 
 - `0.0.0.0 ads.example.org` → exact.
 - plain hosts/domain entries → the source's declared default scope.
-- Phishing Army Adblock entries → tree rules for the listed hostname and descendants; the shared hosting parent is not promoted.
 - `*.example.org` in OISD `domainswild` → tree.
 - `||example.org^` → tree.
 - ABP rules with resource-type or other modifiers are discarded rather than broadened.
@@ -74,11 +73,15 @@ Source formats are interpreted explicitly:
 
 The AdGuard output keeps exact and tree scopes distinct. An exact entry under an existing tree rule is omitted as redundant. Hosts output contains all known hostnames as exact mappings, including hostnames explicitly enumerated by legacy hosts sources. **No hosts-format list can block arbitrary future/dynamic subdomains. HaGeZi explicitly warns that its legacy hosts/subdomain outputs are only partial for generic, dynamic or previously unknown subdomains; we use them only as best-effort expansion, not as equivalent wildcard protection.** For full wildcard coverage, use `abp.txt` with an AdGuard-compatible DNS blocker, or another router DNS engine that supports wildcard domain rules.
 
-## Google / AI Studio compatibility
+## Google / AI Studio and application compatibility
 
-The builder has protected zones for Google infrastructure and AI Studio/Gemini/auth/connectivity endpoints. A protected service cannot be swallowed by an imported broad tree rule. A small set of explicitly selected advertising endpoints under Google can still be blocked. Add new exceptions only after checking the exact hostname and the effect on the parent zone.
+The builder protects Google infrastructure and AI Studio/Gemini/auth/connectivity zones from broad imported tree rules. It also applies the exact-host compatibility exceptions supplied for YouTube history and icons, Google suggestions/video delivery, UC Browser services, Google fonts, Spotify Connect, Sberbank compatibility, GitHub-related S3 downloads, and KDE theme downloads.
 
-HaGeZi's standard tiers already include its Native Tracker categories at the tier's chosen strength; we do not add those same device lists again as separate sources. The builder preserves three narrowly scoped exact-host compatibility exceptions observed in the Schakal comparison sample: `www.baihe.com`, `jobs.sciencecareers.org`, and `cardlytics.com`. It does **not** allowlist their entire parent trees; unrelated sibling subdomains remain eligible for blocking. A tree rule on a parent that would swallow one of these exact exceptions is rejected.
+These are narrow exact-host exceptions rather than provider-wide allowlists. The existing reviewed exact exceptions `www.baihe.com`, `jobs.sciencecareers.org` and `cardlytics.com` remain narrow as well.
+
+AdGuard output emits exact-host exceptions as bare-domain exception rules such as `@@s.youtube.com`; these match the named hostname without automatically allowing every subdomain. It additionally contains the wildcard exception `@@||mini5*.opera-mini.net^`, which also covers subdomains of matching Opera Mini hostnames. A regular hosts file cannot express a wildcard exception; it omits known matching hostnames found in the downloaded feeds, while the AdGuard format preserves the wildcard for future names.
+
+HaGeZi's standard tiers already include its Native Tracker categories at the tier's chosen strength; we do not add the same device feeds again as separate sources.
 
 ## Reliability and publication
 
@@ -87,8 +90,10 @@ HaGeZi's standard tiers already include its Native Tracker categories at the tie
 - There is no silent partial build.
 - FAT and SLIM are both built before publication; if either profile fails, neither output generation is published.
 - Files are staged and published with rollback on filesystem errors.
-- `build-report.json` records source status, per-source counts, exact/tree counts, overlaps, output sizes and SHA-256 values.
-- `source-map.tsv.gz` records `profile`, `source_id`, `domain`, and `scope` for every source-derived entry.
+- `build-report.json` records source status, license/permission references, attribution, per-source counts, exact/tree counts, overlaps, output sizes and SHA-256 values.
+- `sources.json` is the machine-readable source/rights registry. The public builder fails closed if any configured feed lacks approved redistribution metadata or differs from the registry.
+- The release also contains source inventories and the applicable third-party license notices.
+- `source-map.tsv.gz` records `profile`, `source_id`, `license_id`, `domain`, and `scope` for every source-derived entry.
 - `audit_dns.py` is diagnostic only. It compares A/AAAA responses via two independent resolvers and reports `RESOLVES`, `CONFIRMED_NXDOMAIN`, `NO_ADDRESS_RECORD`, or `INDETERMINATE`. It never removes a domain. A domain with no A/AAAA record is not necessarily dead (it may be a non-resolving parent with working subdomains).
 - A failed DNS lookup, one timeout, SERVFAIL, or NODATA must never trigger automatic deletion.
 
@@ -117,6 +122,7 @@ Python 3.13 is recommended.
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python update.py --check-source-policy
 .venv/bin/python update.py --self-test
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python update.py --list-sources
@@ -137,4 +143,4 @@ A green build proves that source parsing, safeguards and publication steps succe
 
 ## Attribution and licenses
 
-See [SOURCES.md](SOURCES.md) and [licenses/](licenses/). The generated lists contain data maintained by upstream projects; this repository does not claim ownership of those entries. HaGeZi and OISD publish their lists under GPL-3.0 and their license texts are included here. GoodbyeAds' repository is MIT-licensed, but its source catalog lists upstream feeds with differing terms. The Schakal forum post links to the public list but no explicit redistribution license was identified in the reviewed post; verify applicable terms or obtain permission before distributing derived data publicly. Do not assume that the code license automatically licenses every upstream data source.
+See [SOURCES.md](SOURCES.md), [sources.json](sources.json), [DATA-LICENSING.md](DATA-LICENSING.md) and [licenses/](licenses/). The root MIT license applies to the original builder code; it does not relicense third-party feeds or generated data. Every active source has a recorded license or explicit publisher permission and attribution. Aggregator-level licenses are not treated as blanket permission for independent upstream data.

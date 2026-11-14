@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.0
+
+- Remove Schakal, GoodbyeAds, StevenBlack Unified and Phishing Army from public profiles pending source-level redistribution and provenance review.
+- Replace opaque community aggregates with documented direct AdAway, Peter Lowe and NoCoin feeds in FAT and SLIM.
+- Add a machine-readable `sources.json` registry and fail-closed public redistribution policy validation.
+- Record source license/permission, attribution and redistribution status in build-report.json and source-map.tsv.gz.
+- Add the supplied exact-host compatibility exceptions and the AdGuard-only Opera Mini wildcard exception.
+- Record retired, quality-excluded and permission-pending sources from the supplied Schakal inventory.
+
 ## 4.2.2
 
 - Add the community-documented `schakal.hopto.org/hosts.txt` mirror as a fallback when the primary Schakal host is unreachable from GitHub Actions.

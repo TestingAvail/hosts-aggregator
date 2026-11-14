@@ -35,15 +35,11 @@ from typing import Callable, Iterable, TextIO
 
 import aiohttp
 
-VERSION = "4.2.2"
+VERSION = "4.3.0"
 ROOT = Path(__file__).resolve().parent
 CACHE_DIR = Path(os.environ.get("SOURCE_CACHE_DIR", ROOT / ".source-cache"))
 CACHE_MAX_AGE_DAYS = int(os.environ.get("SOURCE_CACHE_MAX_AGE_DAYS", "14"))
 ALLOW_SOURCE_SHRINK = os.environ.get("ALLOW_SOURCE_SHRINK", "false").strip().lower() in {"1", "true", "yes", "on"}
-# Schakal is publicly available and included as an exact-host supplement.
-# Its reviewed forum post does not identify an open redistribution license;
-# attribution is retained and the owner must verify applicable terms.
-ENABLE_SCHAKAL_SOURCE = os.environ.get("ENABLE_SCHAKAL_SOURCE", "true").strip().lower() in {"1", "true", "yes", "on"}
 MAX_CONCURRENT_DOWNLOADS = 10
 DOWNLOAD_ATTEMPTS = 3
 MAX_LINE_LENGTH = 65536
@@ -70,8 +66,8 @@ class Source:
 HAGEZI_MAIN = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
 HAGEZI_LEGACY = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest"
 
-# FAT: one primary tier + its threat add-on, independent curation approaches,
-# plus exact-host feeds that improve legacy hosts coverage.
+# FAT: primary DNS tier + threat-intelligence companion + independently licensed direct feeds.
+# Aggregator feeds with unclear component rights are intentionally not consumed.
 FAT_SOURCES = [
     Source(
         "hagezi-pro-plus-wildcard", "HaGeZi Pro++ (wildcard domains)",
@@ -81,7 +77,7 @@ FAT_SOURCES = [
     Source(
         "hagezi-pro-plus-hosts", "HaGeZi Pro++ (legacy hosts expansion)",
         f"{HAGEZI_LEGACY}/hosts/pro.plus.txt",
-        SCOPE_EXACT, False, "hosts-expansion", "Enumerated known hostnames for hosts consumers; cannot represent unknown dynamic subdomains.",
+        SCOPE_EXACT, False, "hosts-expansion", "Enumerated known hostnames for hosts consumers; cannot cover unknown dynamic subdomains.",
     ),
     Source(
         "hagezi-tif-medium", "HaGeZi TIF Medium",
@@ -93,30 +89,20 @@ FAT_SOURCES = [
         SCOPE_TREE, False, "ads-trackers-malware", "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
     ),
     Source(
-        "goodbyeads", "GoodbyeAds",
-        "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
-        SCOPE_EXACT, False, "mobile-ads-trackers", "Hosts feed. See SOURCES.md for attribution and upstream source-license caveat.",
+        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
+        SCOPE_EXACT, False, "mobile-ads-trackers", "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
     ),
     Source(
-        "stevenblack-unified", "StevenBlack Unified",
-        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        SCOPE_EXACT, False, "adware-malware", "Curated hosts aggregator; component feeds are not re-added separately.",
+        "peter-lowe", "Peter Lowe's Ad and Tracking Server List",
+        "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext&useip=0.0.0.0",
+        SCOPE_EXACT, False, "ads-trackers-malware", "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
     ),
     Source(
-        "phishing-army", "Phishing Army (canonical Adblock feed)",
-        "https://phishing.army/download/phishing-army-adblock.txt",
-        SCOPE_TREE, False, "phishing", "Canonical reviewed phishing-host feed. A listed tenant hostname covers that hostname and its descendants, but never its unrelated parent/shared-hosting provider.",
+        "nocoin", "NoCoin hosts",
+        "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
+        SCOPE_EXACT, False, "cryptomining", "MIT-licensed hosts feed; preserve Hosh's copyright/license notice in project attribution.",
     ),
- ]
-
-SCHAKAL_SOURCE = Source(
-    "schakal-full-hosts", "Schakal full hosts", "https://schakal.ru/hosts/hosts.txt",
-    SCOPE_EXACT, False, "community-hosts",
-    "Default FAT exact-host supplement; uses the community-documented hopto.org mirror if the primary host is unreachable.",
-    ("https://schakal.hopto.org/hosts.txt",),
-)
-if ENABLE_SCHAKAL_SOURCE:
-    FAT_SOURCES.append(SCHAKAL_SOURCE)
+]
 
 SLIM_SOURCES = [
     Source(
@@ -132,11 +118,20 @@ SLIM_SOURCES = [
     Source(
         "hagezi-tif-mini", "HaGeZi TIF Mini",
         f"{HAGEZI_MAIN}/wildcard/tif.mini-onlydomains.txt",
-        SCOPE_TREE, False, "threat-intelligence", "Smaller threat-intelligence companion for resource-constrained routers.",
+        SCOPE_TREE, False, "threat-intelligence", "Smaller threat-intelligence companion for resource-constrained profiles.",
     ),
     Source(
         "oisd-small", "OISD Small (domainswild)", "https://small.oisd.nl/domainswild",
         SCOPE_TREE, False, "ads", "Small wildcard-domain list; Big and Small are alternatives, not layers.",
+    ),
+    Source(
+        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
+        SCOPE_EXACT, False, "mobile-ads-trackers", "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
+    ),
+    Source(
+        "peter-lowe", "Peter Lowe's Ad and Tracking Server List",
+        "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext&useip=0.0.0.0",
+        SCOPE_EXACT, False, "ads-trackers-malware", "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
     ),
 ]
 
@@ -145,6 +140,75 @@ OUTPUTS = {
     "SLIM": ("hosts-slim.txt", "abp-slim.txt"),
 }
 PROFILE_SOURCES = {"FAT": FAT_SOURCES, "SLIM": SLIM_SOURCES}
+
+
+def load_source_registry(path: Path | None = None) -> dict:
+    """Load the machine-readable source/redistribution registry."""
+    registry_path = path or (ROOT / "sources.json")
+    try:
+        data = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"cannot read source registry {registry_path}: {error}") from error
+    if data.get("schema_version") != 1:
+        raise RuntimeError("unsupported sources.json schema_version")
+    return data
+
+
+def validate_public_source_policy(
+    profiles: dict[str, list[Source]] | None = None,
+    path: Path | None = None,
+) -> dict[str, dict]:
+    """Fail closed if a public profile contains a feed without a documented redistribution basis."""
+    configured_profiles = profiles or PROFILE_SOURCES
+    registry = load_source_registry(path)
+    active_records = registry.get("active_sources", [])
+    active = {item.get("id"): item for item in active_records if item.get("id")}
+    if len(active) != len(active_records):
+        raise RuntimeError("sources.json contains duplicate or missing active source IDs")
+
+    configured: dict[str, set[str]] = {}
+    configured_sources: dict[str, Source] = {}
+    for profile_name, sources in configured_profiles.items():
+        for source in sources:
+            configured.setdefault(source.id, set()).add(profile_name)
+            configured_sources[source.id] = source
+
+    missing = sorted(set(configured) - set(active))
+    unused = sorted(set(active) - set(configured))
+    if missing or unused:
+        raise RuntimeError(
+            "source registry/configuration mismatch: "
+            + (f"missing metadata for {', '.join(missing)}. " if missing else "")
+            + (f"unused active registry entries: {', '.join(unused)}." if unused else "")
+        )
+
+    approved_statuses = set(registry.get("policy", {}).get(
+        "approved_redistribution_statuses",
+        ["approved", "approved_with_attribution"],
+    ))
+    for source_id, source in configured_sources.items():
+        record = active[source_id]
+        redistribution = record.get("redistribution", {})
+        license_info = record.get("license", {})
+        if redistribution.get("status") not in approved_statuses:
+            raise RuntimeError(
+                f"public build blocked: {source_id} redistribution status is "
+                f"{redistribution.get('status', 'missing')}"
+            )
+        if record.get("url") != source.url:
+            raise RuntimeError(f"source URL mismatch between update.py and sources.json for {source_id}")
+        if record.get("scope") != source.default_scope:
+            raise RuntimeError(f"source scope mismatch between update.py and sources.json for {source_id}")
+        if set(record.get("profiles", [])) != configured[source_id]:
+            raise RuntimeError(f"source profile mismatch between update.py and sources.json for {source_id}")
+        if not license_info.get("id") or not license_info.get("url"):
+            raise RuntimeError(f"source {source_id} has no license/permission reference")
+        if not record.get("attribution"):
+            raise RuntimeError(f"source {source_id} has no attribution statement")
+        if not source.url.startswith("https://"):
+            raise RuntimeError(f"source {source_id} must use HTTPS")
+    return active
+
 
 GOOGLE_PROTECTED_ZONES = {
     "google.com", "googleapis.com", "gstatic.com", "googleusercontent.com",
@@ -174,7 +238,7 @@ FORCE_BLOCK_TREE = {
     "ads.mail.ru", "ad.mail.ru", "trk.mail.ru", "yabs.yandex.ru",
     "redirect.appmetrica.yandex.com", "s.click.aliexpress.com", "aemetrics.aliexpress.ru",
     "fourier.aliexpress.com", "acjs.aliyun.com", "mmstat.com", "ru.mmstat.com",
-    "fourier.taobao.com", "piwik.opendesktop.org", "app-measurement.com",
+    "fourier.taobao.com", "app-measurement.com",
     "firebase-settings.crashlytics.com", "googletagmanager.com", "doubleclick.net",
     "doubleclick.com", "googleads.g.doubleclick.net", "googlesyndication.com",
     "googleadservices.com", "googletagservices.com", "googleads.com", "2mdn.net",
@@ -191,8 +255,6 @@ WHITELIST_TREE = {
     "localhost", "local", "broadcasthost", "ip6-localhost",
     "vk.ru", "vk.com", "userapi.com", "vk-cdn.net",
     "cloud.mail.ru", "mail.ru", "imgsmail.ru",
-    "yt3.ggpht.com", "redirector.googlevideo.com", "gstaticadssl.l.google.com",
-    "audio-ak-spotify-com.akamaized.net", "stat.online.sberbank.ru", "s3.amazonaws.com",
     "dns.quad9.net", "dns10.quad9.net", "cloudflare-dns.com", "security.cloudflare-dns.com",
     "family.cloudflare-dns.com", "one.one.one.one", "1dot1dot1dot1.cloudflare-dns.com",
     "dns.google", "common.dot.dns.yandex.net", "safe.dot.dns.yandex.net", "family.dot.dns.yandex.net",
@@ -220,17 +282,31 @@ WHITELIST_TREE = {
     "connectivity-check.ubuntu.com",
 }
 
-# Known legitimate/dual-use domains observed in the Schakal-only sample. These
-# exceptions are conservative: keep service functionality rather than blanket
-# block a whole legitimate provider. Review before extending this set.
-# Exact compatibility exceptions from examples reviewed in the Schakal-only
-# sample. Keep these narrow: a broad allow tree would hide unrelated tracking
-# subdomains and create avoidable underblocking.
+# Exact compatibility exceptions supplied from real-world usage reports.
+# Keep these narrow: do not turn a single-host exception into a provider-wide allowlist.
 MANUAL_ALLOW_EXACT = {
-    "www.baihe.com",             # legitimate dating/community service hostname
-    "jobs.sciencecareers.org",   # legitimate science jobs/career hostname
-    "cardlytics.com",            # bank/card-linked offers and cashback apex
+    "s.youtube.com",                         # YouTube watch-history functionality
+    "piwik.opendesktop.org",                 # KDE theme downloads
+    "yt3.ggpht.com",                         # YouTube channel icons
+    "suggestqueries.google.com",             # Google search suggestions
+    "redirector.googlevideo.com",            # compatibility with external video consumers
+    "hl-img.peco.uodoo.com",                 # UC Browser image service
+    "browser.cloud.ucweb.com",               # UC Browser service
+    "gstaticadssl.l.google.com",             # Google font delivery compatibility
+    "audio-ak-spotify-com.akamaized.net",    # Spotify Connect switching
+    "stat.online.sberbank.ru",               # Sberbank application compatibility
+    "s3.amazonaws.com",                      # downloads and GitHub-related object delivery
+    "www.baihe.com",
+    "jobs.sciencecareers.org",
+    "cardlytics.com",
 }
+# Partial-label wildcard exception: valid in AdGuard DNS syntax, not in hosts files.
+MANUAL_ALLOW_REGEX = (
+    re.compile(r"^(?:[^.]+\.)*mini5[^.]*\.opera-mini\.net$"),
+)
+MANUAL_ALLOW_ADGUARD_RULES = tuple(
+    f"@@{domain}" for domain in sorted(MANUAL_ALLOW_EXACT)
+) + ("@@||mini5*.opera-mini.net^",)
 
 DOMAIN_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 ABP_TREE_RULE = re.compile(r"^\|\|([a-z0-9.-]+)\^(?:\$(important))?$", re.IGNORECASE)
@@ -310,10 +386,13 @@ def is_protected_rule(domain: str, scope: str, force: bool = False) -> bool:
         # A tree rule on a parent would swallow an allowlisted protected tree.
         if scope == SCOPE_TREE and is_parent_of(domain, zone):
             return True
-    if domain in MANUAL_ALLOW_EXACT:
-        return True
-    # Do not let a tree rule on a parent swallow a narrowly allowlisted FQDN.
-    if scope == SCOPE_TREE and any(is_parent_of(domain, exact) for exact in MANUAL_ALLOW_EXACT):
+    # Manual allowlist entries are exact-host exceptions. A tree rule may
+    # remain in the aggregate because AdGuard gets a matching exact exception;
+    # hosts output skips the allowlisted hostname during rendering.
+    if scope == SCOPE_EXACT and (
+        domain in MANUAL_ALLOW_EXACT
+        or any(pattern.fullmatch(domain) for pattern in MANUAL_ALLOW_REGEX)
+    ):
         return True
     return False
 
@@ -780,8 +859,12 @@ def load_previous_host_count(path: Path) -> int:
     return count
 
 
-async def build_profile(profile: str) -> dict:
+async def build_profile(
+    profile: str,
+    source_policies: dict[str, dict] | None = None,
+) -> dict:
     started = time.monotonic()
+    source_policies = source_policies or validate_public_source_policy()
     sources = PROFILE_SOURCES[profile]
     force_roots = set(FORCE_BLOCK_TREE)
     if profile == "FAT":
@@ -831,11 +914,15 @@ async def build_profile(profile: str) -> dict:
             source_metric = metrics.get(source.id, {
                 "unique_domains": 0, "exclusive_domains": 0, "exact_domains": 0, "tree_domains": 0,
             })
+            source_policy = source_policies[source.id]
             entry = {
                 "id": source.id, "name": source.name, "url": source.url,
                 "fallback_urls": list(source.fallback_urls),
                 "status": item["status"], "primary": source.primary,
                 "purpose": source.purpose, "default_scope": source.default_scope,
+                "license": source_policy["license"],
+                "attribution": source_policy["attribution"],
+                "redistribution": source_policy["redistribution"],
                 "accepted_rules_in_feed": int(item.get("accepted_rules", 0)),
                 **source_metric,
                 "notes": source.notes,
@@ -865,7 +952,8 @@ async def build_profile(profile: str) -> dict:
 
 def audit_protected_rules(store: DomainStore, profile: str) -> None:
     """Reject exact blocks of protected hosts or tree rules shadowing services."""
-    for protected in GOOGLE_PROTECTED_ZONES | AI_STUDIO_PROTECTED_ZONES | MANUAL_ALLOW_EXACT:
+    protected_hosts = GOOGLE_PROTECTED_ZONES | AI_STUDIO_PROTECTED_ZONES
+    for protected in protected_hosts:
         # A tree rule at this name or any parent would match this protected host.
         for parent in suffixes(protected):
             if store.contains_rule(parent, SCOPE_TREE):
@@ -916,8 +1004,24 @@ def run_self_tests() -> None:
     # Exceptions are exact, not blanket parent-tree allowlists.
     assert parse_source_line("tracking.cardlytics.com", SCOPE_TREE) == [("tracking.cardlytics.com", SCOPE_TREE)]
     assert parse_source_line("ads.baihe.com", SCOPE_TREE) == [("ads.baihe.com", SCOPE_TREE)]
-    assert parse_source_line("cardlytics.com", SCOPE_TREE) == []
-    assert parse_source_line("sciencecareers.org", SCOPE_TREE) == []  # must not swallow jobs.sciencecareers.org
+    assert parse_source_line("cardlytics.com", SCOPE_TREE) == [("cardlytics.com", SCOPE_TREE)]
+    assert parse_source_line("sciencecareers.org", SCOPE_TREE) == [("sciencecareers.org", SCOPE_TREE)]
+
+    # User-provided compatibility exceptions are precise rather than provider-wide.
+    for allowed in (
+        "s.youtube.com", "piwik.opendesktop.org", "yt3.ggpht.com",
+        "suggestqueries.google.com", "redirector.googlevideo.com",
+        "hl-img.peco.uodoo.com", "browser.cloud.ucweb.com",
+        "gstaticadssl.l.google.com", "audio-ak-spotify-com.akamaized.net",
+        "stat.online.sberbank.ru", "s3.amazonaws.com",
+    ):
+        assert parse_source_line(allowed, SCOPE_EXACT) == []
+    assert parse_source_line("other.youtube.com", SCOPE_EXACT) == [("other.youtube.com", SCOPE_EXACT)]
+    assert parse_source_line("piwik.opendesktop.org", SCOPE_TREE) == []
+    assert parse_source_line("www.opendesktop.org", SCOPE_EXACT) == [("www.opendesktop.org", SCOPE_EXACT)]
+    assert parse_source_line("mini5abc.opera-mini.net", SCOPE_EXACT) == []
+    assert parse_source_line("opera-mini.net", SCOPE_TREE) == [("opera-mini.net", SCOPE_TREE)]
+    assert parse_source_line("other.opera-mini.net", SCOPE_EXACT) == [("other.opera-mini.net", SCOPE_EXACT)]
 
     # AdGuard exact vs tree renderings must remain distinct.
     store = DomainStore()
@@ -958,14 +1062,46 @@ def rule_covered_by_tree(domain: str, tree_rules: set[str]) -> bool:
     return any(parent != domain and parent in tree_rules for parent in suffixes(domain))
 
 
+SOURCE_NOTICES = {
+    "hagezi-pro-plus-wildcard": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists",
+    "hagezi-pro-plus-hosts": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists-legacy",
+    "hagezi-tif-medium": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists",
+    "hagezi-light-wildcard": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists",
+    "hagezi-light-hosts": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists-legacy",
+    "hagezi-tif-mini": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists",
+    "oisd-big": "OISD — GPL-3.0; https://oisd.nl/faq",
+    "oisd-small": "OISD — GPL-3.0; https://oisd.nl/faq",
+    "adaway": "AdAway contributors — CC BY 3.0; normalized and included in this aggregate; https://creativecommons.org/licenses/by/3.0/",
+    "peter-lowe": "Peter Lowe — publisher permits combining and republishing; https://pgl.yoyo.org/as/index.php",
+    "nocoin": "NoCoin — Copyright (c) 2017 Hosh, MIT; https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE",
+}
+
+
+def write_source_notices(store: DomainStore, stream: TextIO, prefix: str) -> None:
+    """Include attribution for the feeds that contributed to this profile."""
+    source_ids = {
+        row[0] for row in store.db.execute("SELECT DISTINCT source_id FROM source_domains")
+    }
+    emitted: set[str] = set()
+    for source_id in sorted(source_ids):
+        notice = SOURCE_NOTICES.get(source_id)
+        if notice and notice not in emitted:
+            stream.write(f"{prefix} Source notice: {notice}\n")
+            emitted.add(notice)
+
+
 def write_hosts(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write(f"# Hosts Aggregator - {title}\n")
     stream.write("# Exact hostnames only. Tree-feed roots and all known expanded hosts are listed.\n")
     stream.write("# Hosts format cannot block unknown/dynamic subdomains.\n")
     stream.write("# Generated automatically; do not edit manually.\n")
-    stream.write("# Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
+    stream.write("# Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n")
+    write_source_notices(store, stream, "#")
+    stream.write("#\n")
     count = 0
     for (domain,) in store.all_domains():
+        if domain in MANUAL_ALLOW_EXACT or any(pattern.fullmatch(domain) for pattern in MANUAL_ALLOW_REGEX):
+            continue
         stream.write(f"0.0.0.0 {domain}\n")
         count += 1
     return count
@@ -975,8 +1111,11 @@ def write_adguard(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write(f"! Title: Hosts Aggregator - {title}\n")
     stream.write("! Format: AdGuard DNS filtering syntax\n")
     stream.write("! ||domain^ = domain and all subdomains; bare domain = exact hostname only.\n")
+    stream.write("! Manual compatibility exceptions follow the blocking rules.\n")
     stream.write("! Generated automatically; do not edit manually.\n")
-    stream.write("! Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
+    stream.write("! Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n")
+    write_source_notices(store, stream, "!")
+    stream.write("!\n")
 
     tree_rules: set[str] = set()
     tree_cursor = store.db.execute("SELECT domain FROM rules WHERE scope='tree' ORDER BY length(domain),domain")
@@ -993,6 +1132,10 @@ def write_adguard(store: DomainStore, stream: TextIO, title: str) -> int:
         if rule_covered_by_tree(domain, tree_rules):
             continue
         stream.write(f"{domain}\n")
+        count += 1
+
+    for exception_rule in MANUAL_ALLOW_ADGUARD_RULES:
+        stream.write(f"{exception_rule}\n")
         count += 1
 
     return count
@@ -1047,21 +1190,26 @@ def atomic_publish(staged: dict[Path, Path]) -> None:
                 backup.unlink(missing_ok=True)
 
 
-def stage_source_map(profiles: list[dict]) -> tuple[Path, int]:
-    """Stage a compressed provenance map: profile, source, scope, domain."""
+def stage_source_map(
+    profiles: list[dict],
+    source_policies: dict[str, dict] | None = None,
+) -> tuple[Path, int]:
+    """Stage a compressed provenance map: profile, source, license, domain, scope."""
+    source_policies = source_policies or {}
     fd, temp_name = tempfile.mkstemp(prefix=".source-map-", suffix=".tsv.gz", dir=ROOT)
     os.close(fd)
     rows = 0
     try:
         with gzip.open(temp_name, "wt", encoding="utf-8", newline="\n", compresslevel=6) as stream:
-            stream.write("profile\tsource_id\tdomain\tscope\n")
+            stream.write("profile\tsource_id\tlicense_id\tdomain\tscope\n")
             for result in profiles:
                 profile = result["profile"]
                 cursor = result["store"].db.execute(
                     "SELECT source_id,domain,scope FROM source_domains ORDER BY source_id,domain"
                 )
                 for source_id, domain, scope in cursor:
-                    stream.write(f"{profile}\t{source_id}\t{domain}\t{scope}\n")
+                    license_id = source_policies.get(source_id, {}).get("license", {}).get("id", "UNASSESSED")
+                    stream.write(f"{profile}\t{source_id}\t{license_id}\t{domain}\t{scope}\n")
                     rows += 1
         os.chmod(temp_name, 0o644)
         return Path(temp_name), rows
@@ -1070,7 +1218,11 @@ def stage_source_map(profiles: list[dict]) -> tuple[Path, int]:
         raise
 
 
-def publish_generation(profiles: list[dict]) -> dict:
+def publish_generation(
+    profiles: list[dict],
+    source_policies: dict[str, dict] | None = None,
+) -> dict:
+    source_policies = source_policies or {}
     staged: dict[Path, Path] = {}
     output_info: dict[str, dict] = {}
     report_path = ROOT / "build-report.json"
@@ -1087,9 +1239,12 @@ def publish_generation(profiles: list[dict]) -> dict:
             staged[adguard_target] = stage_file(
                 adguard_target, lambda stream, r=result: write_adguard(r["store"], stream, r["profile"])
             )
+            with staged[hosts_target].open("r", encoding="utf-8") as hosts_stream:
+                hosts_entry_count = sum(1 for line in hosts_stream if line.startswith("0.0.0.0 "))
             output_info[hosts_name] = {
-                "entries": result["domain_count"], "bytes": staged[hosts_target].stat().st_size,
-                "sha256": sha256_file(staged[hosts_target]), "format": "hosts; exact hostnames",
+                "entries": hosts_entry_count, "bytes": staged[hosts_target].stat().st_size,
+                "sha256": sha256_file(staged[hosts_target]),
+                "format": "hosts; exact hostnames (compatibility exceptions omitted)",
             }
             with staged[adguard_target].open("r", encoding="utf-8") as stream:
                 rule_count = sum(1 for line in stream if line.strip() and not line.lstrip().startswith(("!", "#")))
@@ -1098,7 +1253,7 @@ def publish_generation(profiles: list[dict]) -> dict:
                 "sha256": sha256_file(staged[adguard_target]), "format": "AdGuard DNS exact + domain-tree rules",
             }
 
-        source_map_path, source_map_rows = stage_source_map(profiles)
+        source_map_path, source_map_rows = stage_source_map(profiles, source_policies)
         source_map_target = ROOT / "source-map.tsv.gz"
         staged[source_map_target] = source_map_path
         output_info["source-map.tsv.gz"] = {
@@ -1117,8 +1272,10 @@ def publish_generation(profiles: list[dict]) -> dict:
                 "dns_audit": "Non-destructive only; no domain is automatically removed based on liveness checks.",
             },
             "policy": {
-                "schakal_source_enabled": ENABLE_SCHAKAL_SOURCE,
-                "schakal_redistribution_license_review": "Schakal is enabled by default as an exact-host FAT supplement; the reviewed public forum post did not identify an explicit open redistribution license, so maintain attribution and verify or obtain permission for public redistribution.",
+                "source_registry": "sources.json",
+                "public_redistribution_gate": "Only sources with approved or approved_with_attribution status can enter public builds.",
+                "manual_allow_exact_count": len(MANUAL_ALLOW_EXACT),
+                "manual_allow_pattern_count": len(MANUAL_ALLOW_ADGUARD_RULES),
                 "all_configured_sources_required": True,
                 "source_cache_max_age_days": CACHE_MAX_AGE_DAYS,
                 "allow_source_shrink_override_enabled": ALLOW_SOURCE_SHRINK,
@@ -1170,9 +1327,12 @@ def publish_generation(profiles: list[dict]) -> dict:
 
 
 async def async_main() -> None:
+    source_policies = validate_public_source_policy()
+    print(f"Source policy: OK ({len(source_policies)} approved feeds)")
     run_self_tests()
     profiles_or_errors = await asyncio.gather(
-        build_profile("FAT"), build_profile("SLIM"), return_exceptions=True
+        build_profile("FAT", source_policies), build_profile("SLIM", source_policies),
+        return_exceptions=True
     )
     errors = [
         (name, result) for name, result in zip(("FAT", "SLIM"), profiles_or_errors)
@@ -1185,7 +1345,7 @@ async def async_main() -> None:
         raise RuntimeError("No outputs published: " + "; ".join(f"{name}: {err}" for name, err in errors))
     profiles = [profiles_or_errors[0], profiles_or_errors[1]]
     try:
-        publish_generation(profiles)
+        publish_generation(profiles, source_policies)
     finally:
         for result in profiles:
             result["store"].close()
@@ -1195,17 +1355,29 @@ async def async_main() -> None:
 def cli() -> None:
     parser = argparse.ArgumentParser(description="Build router-friendly FAT and SLIM hosts/AdGuard lists.")
     parser.add_argument("--self-test", action="store_true", help="run offline parser/output tests")
+    parser.add_argument("--check-source-policy", action="store_true", help="validate licenses and redistribution rights for all public feeds")
     parser.add_argument("--list-sources", action="store_true", help="show configured feeds and rule scopes")
     args = parser.parse_args()
     if args.self_test:
         run_self_tests()
         return
+    if args.check_source_policy:
+        policies = validate_public_source_policy()
+        print(f"Source policy: OK ({len(policies)} approved feeds)")
+        return
     if args.list_sources:
+        policies = validate_public_source_policy()
         for profile, sources in PROFILE_SOURCES.items():
             print(f"\n{profile}:")
             for source in sources:
                 marker = " [PRIMARY]" if source.primary else ""
-                print(f"- {source.name}{marker}\n  scope={source.default_scope}; purpose={source.purpose}\n  {source.url}")
+                policy = policies[source.id]
+                print(
+                    f"- {source.name}{marker}\n"
+                    f"  scope={source.default_scope}; purpose={source.purpose}\n"
+                    f"  license={policy['license']['id']}; redistribution={policy['redistribution']['status']}\n"
+                    f"  {source.url}"
+                )
         return
     asyncio.run(async_main())
 
