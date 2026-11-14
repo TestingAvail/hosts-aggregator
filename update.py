@@ -167,7 +167,7 @@ SLIM_SOURCES = [
         SCOPE_EXACT, False, "mobile-ads-trackers",
         "CC BY 3.0 feed; last observed hosts-file content commit 2023-04-29.",
         license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
-        attribution="AdAway contributors", redistribution_status="approved_with_attribution",
+        attribution="AdAway contributors (including Kicelo and Dominik Schuermann)", redistribution_status="approved_with_attribution",
     ),
     Source(
         "nocoin", "NoCoin Filter List",
