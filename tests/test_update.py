@@ -11,6 +11,12 @@ import update
 
 
 class ParserSemanticsTests(unittest.TestCase):
+    def test_schakal_has_the_official_host_as_a_fallback(self):
+        source = update.SCHAKAL_SOURCE
+        self.assertEqual(source.url, "https://schakal.ru/hosts/hosts.txt")
+        self.assertEqual(source.fallback_urls, ("https://schakal.hopto.org/hosts.txt",))
+        self.assertEqual(source.default_scope, update.SCOPE_EXACT)
+
     def test_plain_domain_scope_is_source_declared(self):
         self.assertEqual(
             update.parse_source_line("ads.example.test", update.SCOPE_EXACT),
