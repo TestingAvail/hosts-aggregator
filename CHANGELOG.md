@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.2.2
+
+- Add the community-documented `schakal.hopto.org/hosts.txt` mirror as a fallback when the primary Schakal host is unreachable from GitHub Actions.
+- Report fallback URLs in source provenance and bind cached snapshots to the configured fallback list.
+
 ## 4.2.1
 
 - Keep Schakal out of scheduled/public releases by default because the reviewed source did not provide an explicit redistribution license; add a deliberate workflow-dispatch opt-in for owners who have confirmed permission.
