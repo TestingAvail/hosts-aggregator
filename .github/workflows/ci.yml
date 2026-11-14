@@ -68,3 +68,59 @@ jobs:
           else
             git diff --check HEAD^ HEAD
           fi
+
+  preview:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+      - name: Verify source rights before any download
+        run: python update.py --check-source-policy
+      - name: Build FAT and SLIM from live upstream feeds (preview only)
+        env:
+          SOURCE_CACHE_DIR: ${{ runner.temp }}/hosts-aggregator-preview-cache
+          SOURCE_CACHE_MAX_AGE_DAYS: "14"
+          PYTHONUNBUFFERED: "1"
+        run: python update.py
+      - name: Verify preview outputs and checksums
+        run: |
+          test -s hosts.txt
+          test -s abp.txt
+          test -s hosts-slim.txt
+          test -s abp-slim.txt
+          test -s build-report.json
+          test -s SHA256SUMS
+          test -s source-map.tsv.gz
+          sha256sum -c SHA256SUMS
+      - name: Upload preview artifacts (no publication)
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosts-aggregator-preview-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            hosts.txt
+            abp.txt
+            hosts-slim.txt
+            abp-slim.txt
+            build-report.json
+            SHA256SUMS
+            source-map.tsv.gz
+            sources.json
+            SOURCES.md
+            DATA-LICENSING.md
+            LICENSE
+            licenses/GPL-3.0.txt
+            licenses/MIT-Hosh.txt
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 6
