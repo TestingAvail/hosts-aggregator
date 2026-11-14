@@ -1,151 +1,140 @@
 # Hosts Aggregator
 
-**A fast, automatically built DNS/hosts blocklist for home routers.**
+A GitHub Actions-powered aggregator that builds router-ready **FAT** and **SLIM** DNS blocklists in two output formats:
 
-Hosts Aggregator combines curated public domain feeds, normalizes them, removes duplicates, preserves protected services, and publishes two profiles in two router-friendly formats. Heavy work happens in GitHub Actions; routers only download the finished files.
+- `hosts.txt` / `hosts-slim.txt` — traditional hosts mappings (`0.0.0.0 hostname`). These block only the listed hostnames; a hosts file cannot express a wildcard for unknown subdomains.
+- `abp.txt` / `abp-slim.txt` — AdGuard DNS filtering syntax. Domain-tree rules use `||example.org^`; exact-host rules are emitted as bare `example.org`. The builder preserves the source rule's scope instead of widening every host entry into a subtree rule.
 
-## Downloads
+The project is designed to do expensive download, parsing, de-duplication, validation and report generation on GitHub-hosted runners. Routers only download finished text files.
 
-Use the raw files from `main`:
+## Stable router URLs
 
-| Profile | Hosts format | AdGuard Home / DNS format |
+These URLs and file names are intentionally preserved:
+
+| Profile | Hosts | AdGuard DNS |
 |---|---|---|
-| **FAT** — maximum coverage | [`hosts.txt`](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts.txt) | [`abp.txt`](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp.txt) |
-| **SLIM** — smaller source set | [`hosts-slim.txt`](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts-slim.txt) | [`abp-slim.txt`](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp-slim.txt) |
+| FAT | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts.txt> | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp.txt> |
+| SLIM | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts-slim.txt> | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp-slim.txt> |
 
-The latest build also publishes `build-report.json` and `SHA256SUMS`. The report shows source health, accepted counts, per-source unique and exclusive contributions, overlap, generation time, output sizes, and hashes.
+Release assets (latest successful release):
 
-## Profiles and sources
+- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/hosts.txt>
+- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/abp.txt>
+- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/hosts-slim.txt>
+- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/abp-slim.txt>
+
+The release additionally includes `build-report.json`, `SHA256SUMS`, and `source-map.tsv.gz` (source-level provenance for audits). `SHA256SUMS` covers the four router files and `build-report.json`; the compressed source map has its own SHA-256 recorded in the report. The build report and source map are not router blocklists.
+
+## Profiles
 
 ### FAT
 
-| Source | Purpose | Why it is included |
-|---|---|---|
-| [HaGeZi Pro++](https://github.com/hagezi/dns-blocklists) | Ads, trackers, telemetry and unwanted domains | Main high-coverage DNS feed |
-| [HaGeZi TIF Mini](https://github.com/hagezi/dns-blocklists) | Threat intelligence | Separate phishing/malware-oriented companion feed |
-| [OISD Big](https://oisd.nl/) | Broad ads, trackers and unwanted domains | Independent curated DNS list |
-| [GoodbyeAds](https://github.com/jerryn70/GoodbyeAds) | Mobile and general advertising | Additional mobile-oriented coverage |
-| [StevenBlack Unified](https://github.com/StevenBlack/hosts) | Adware and malware | A separate hosts aggregator with its own curated inputs |
-| [Phishing Army Extended](https://phishing.army/) | Phishing domains | Dedicated phishing feed |
+A high-coverage profile for routers with sufficient memory/CPU:
+
+- HaGeZi Multi Pro++ wildcard-domain feed.
+- HaGeZi Pro++ legacy hosts expansion, to enumerate known subdomains for the hosts output.
+- HaGeZi TIF Medium (larger threat companion for the high-capacity FAT profile).
+- OISD Big in its `domainswild` format.
+- GoodbyeAds.
+- StevenBlack Unified.
+- Phishing Army canonical Adblock feed (tenant-host scoped, with subdomain coverage).
+- Schakal full global hosts feed, imported as exact hostnames only.
+
+FAT is intentionally aggressive and memory-heavier: TIF Medium is substantially larger than TIF Mini. Use it only on higher-capacity routers; for AdGuard Home, HaGeZi notes that TIF Medium needs at least 1 GB RAM. It can still block legitimate/dual-use services. Review the source list and maintain local exceptions where necessary.
+
+Schakal is included in FAT by default as an exact-host supplemental feed, so it contributes to the published aggregate instead of needing to be layered on separately. Its entries are never widened to parent-domain tree rules. The list is publicly available, but the reviewed forum post did not identify an explicit open redistribution license; source URL and attribution are recorded in `SOURCES.md`, and the repository owner should verify or obtain redistribution permission. A manual workflow run can disable it with `include_schakal=false`.
 
 ### SLIM
 
-| Source | Purpose |
-|---|---|
-| [HaGeZi Light](https://github.com/hagezi/dns-blocklists) | Compatibility-oriented DNS filtering |
-| [OISD Small](https://oisd.nl/) | Smaller general-purpose ad/tracker list |
+A smaller compatibility-oriented profile:
 
-HaGeZi's main protection tiers are alternatives, not layers to stack. FAT uses one main tier (Pro++) plus the separate TIF feed. SLIM uses Light. StevenBlack Unified already combines several established hosts sources; its component feeds are not added again just to inflate the source count. The build report shows whether a source actually contributes exclusive domains.
+- HaGeZi Light wildcard-domain feed.
+- HaGeZi Light legacy hosts expansion.
+- HaGeZi TIF Mini (compact threat-intelligence companion for constrained hardware).
+- OISD Small in `domainswild` format.
 
-The source selection is intentionally curated rather than an indiscriminate download of every available list. More sources do not automatically mean better blocking: they can add duplicates, false positives, stale domains, or incompatible syntax.
+OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM now includes TIF Mini so its smaller footprint does not mean dropping threat-intelligence coverage entirely; check the actual memory use on the weakest router before switching it on everywhere.
 
-## Output formats
+## Important rule semantics
 
-- **Hosts** (`hosts*.txt`): `0.0.0.0 example.com`. This format blocks only hostnames explicitly present in the file. Subdomains are blocked only when they are separately listed.
-- **AdGuard DNS rules** (`abp*.txt`): `||example.com^`. This is an AdGuard Home-compatible domain rule that covers the domain and its subdomains. Covered child rules are compacted away.
+The builder stores two rule scopes:
 
-These formats are not semantically identical. The hosts file keeps every exact imported hostname; the AdGuard file removes child entries already covered by a parent rule. Do not assume that a hosts consumer expands parent domains automatically.
+- **exact** — only this fully qualified hostname;
+- **tree** — the hostname and all subdomains.
 
-This project operates at the DNS/hosts level. It cannot remove every ad served from the same hostname as the content (for example, some in-stream or first-party ads). Browser cosmetic filters are a different technology and are not converted into unsafe DNS-wide rules.
+Source formats are interpreted explicitly:
 
-## Compatibility and allowlist policy
+- `0.0.0.0 ads.example.org` → exact.
+- plain hosts/domain entries → the source's declared default scope.
+- Phishing Army Adblock entries → tree rules for the listed hostname and descendants; the shared hosting parent is not promoted.
+- `*.example.org` in OISD `domainswild` → tree.
+- `||example.org^` → tree.
+- ABP rules with resource-type or other modifiers are discarded rather than broadened.
+- ABP exceptions are not imported as block entries.
 
-Google service namespaces (`google.com`, `googleapis.com`, `gstatic.com`, and `googleusercontent.com`) are protected so that Google AI Studio, Gemini, authentication, and related APIs are not accidentally blocked by imported feeds. A deliberately narrow set of well-known Google ad-serving domains is explicitly force-blocked. Explicit manual ad rules take precedence over the broad Google allowlist.
+The AdGuard output keeps exact and tree scopes distinct. An exact entry under an existing tree rule is omitted as redundant. Hosts output contains all known hostnames as exact mappings, including hostnames explicitly enumerated by legacy hosts sources. **No hosts-format list can block arbitrary future/dynamic subdomains. HaGeZi explicitly warns that its legacy hosts/subdomain outputs are only partial for generic, dynamic or previously unknown subdomains; we use them only as best-effort expansion, not as equivalent wildcard protection.** For full wildcard coverage, use `abp.txt` with an AdGuard-compatible DNS blocker, or another router DNS engine that supports wildcard domain rules.
 
-Other compatibility exceptions are maintained in `update.py`. These exceptions are part of the product's policy: review changes carefully before adding broad parent domains.
+## Google / AI Studio compatibility
 
-## Reliability and build pipeline
+The builder has protected zones for Google infrastructure and AI Studio/Gemini/auth/connectivity endpoints. A protected service cannot be swallowed by an imported broad tree rule. A small set of explicitly selected advertising endpoints under Google can still be blocked. Add new exceptions only after checking the exact hostname and the effect on the parent zone.
 
-The GitHub Actions workflow:
+HaGeZi's standard tiers already include its Native Tracker categories at the tier's chosen strength; we do not add those same device lists again as separate sources. The builder preserves three narrowly scoped exact-host compatibility exceptions observed in the Schakal comparison sample: `www.baihe.com`, `jobs.sciencecareers.org`, and `cardlytics.com`. It does **not** allowlist their entire parent trees; unrelated sibling subdomains remain eligible for blocking. A tree rule on a parent that would swallow one of these exact exceptions is rejected.
 
-1. Runs daily and can also be started manually.
-2. Restores the last successful source snapshots from the Actions cache.
-3. Downloads feeds concurrently and retries transient network/HTTP failures.
-4. Uses a source's last successful snapshot for up to 45 days during a temporary outage.
-5. Requires at least 75% of FAT feeds or 50% of SLIM feeds, plus the profile's primary feed, to be available (fresh or cached).
-6. Refuses to publish an empty result or a catastrophic drop of more than 45% versus the previous hosts file.
-7. Runs parser and compatibility regression tests before building.
-8. Stages all four output files, the JSON report and checksums, then publishes the generation with rollback on a file-replacement failure.
-9. Commits generated lists and publishes a GitHub Release; old releases are pruned to the newest 30.
+## Reliability and publication
 
-The source cache is stored in GitHub Actions cache, not committed to the repository. If a cache is missing and a source is unavailable, the workflow fails closed rather than silently publishing an incomplete generation.
+- All configured sources must either download successfully or have a checksum-verified cached snapshot no older than 14 days. Otherwise the build stops and existing public files/releases remain untouched.
+- A suspicious source shrink greater than 50% is rejected and the previous good snapshot is used when available. A manual workflow option can accept a reviewed upstream shrink.
+- There is no silent partial build.
+- FAT and SLIM are both built before publication; if either profile fails, neither output generation is published.
+- Files are staged and published with rollback on filesystem errors.
+- `build-report.json` records source status, per-source counts, exact/tree counts, overlaps, output sizes and SHA-256 values.
+- `source-map.tsv.gz` records `profile`, `source_id`, `domain`, and `scope` for every source-derived entry.
+- `audit_dns.py` is diagnostic only. It compares A/AAAA responses via two independent resolvers and reports `RESOLVES`, `CONFIRMED_NXDOMAIN`, `NO_ADDRESS_RECORD`, or `INDETERMINATE`. It never removes a domain. A domain with no A/AAAA record is not necessarily dead (it may be a non-resolving parent with working subdomains).
+- A failed DNS lookup, one timeout, SERVFAIL, or NODATA must never trigger automatic deletion.
 
-## DNS liveness audit (optional)
+## GitHub Actions
 
-`audit_dns.py` is a separate, opt-in check. It queries Google Public DNS and only asks Cloudflare DNS for a second opinion when Google returns NXDOMAIN. A hostname is marked `CONFIRMED_NXDOMAIN` only when both resolvers agree.
+`.github/workflows/build.yml`:
 
-The audit is **non-destructive**: it writes `dns-audit.csv` and `dns-audit-summary.json` but never removes a domain from the lists. DNS timeouts, SERVFAIL, NODATA, and disagreement are not treated as dead domains. A hostname with no current A record can still be useful, can have AAAA/MX-only service, or can be reused later; automatic pruning based on one failed lookup is unsafe.
+- runs on pushes to builder/config/docs paths;
+- runs daily at **12:17 UTC**, after HaGeZi's published daily update window (scheduled jobs can still be delayed by GitHub);
+- includes the exact-host Schakal supplement in FAT by default; a manual workflow run can disable it;
+- supports `workflow_dispatch`, including an explicit confirmation switch for a reviewed source shrink;
+- runs tests before source downloads/build;
+- caches last successful source snapshots;
+- commits the four stable output files plus `build-report.json` and `SHA256SUMS` to `main`;
+- publishes a GitHub Release with the same four stable filenames and audit metadata;
+- keeps the newest 30 releases.
 
-To run locally:
+`.github/workflows/ci.yml` runs offline tests on builder changes and pull requests. Keep your separate `pages-build-deployment` workflow; this package does not replace or remove it. Dependabot is configured for GitHub Actions and pip updates.
+
+For the `GITHUB_TOKEN` release/push steps, repository Actions permissions must allow read and write access to contents. Public-repository GitHub-hosted runners are used; GitHub still has per-job execution limits and scheduled-run delays.
+
+## Local use
+
+Python 3.13 is recommended.
 
 ```bash
-python -m pip install -r requirements.txt
-python audit_dns.py --input hosts.txt hosts-slim.txt
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python update.py --self-test
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python update.py --list-sources
+.venv/bin/python update.py
 ```
 
-For a quick sample:
+Optional DNS diagnostic sample (never edits lists):
 
 ```bash
-python audit_dns.py --input hosts.txt --limit 10000
+python3 audit_dns.py --files hosts.txt hosts-slim.txt --limit 10000 --concurrency 100 --output dns-audit.csv
 ```
 
-The manual GitHub Actions dispatch has an optional `run_dns_audit` switch. Leave it off for the normal fast build.
+Use `--limit 0` only when intentionally auditing every hostname; this can take significant time and generate many DNS queries.
 
-## Run locally
+## Before relying on a new release
 
-Python 3.11 or newer is recommended.
+A green build proves that source parsing, safeguards and publication steps succeeded; it does not prove that every website will work for every household or that every new malicious hostname is covered. Test FAT first on a small subset of devices and keep a rollback URL. SLIM is the safer default for low-memory routers. Prefer the AdGuard format wherever the router's DNS software supports it.
 
-```bash
-python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python update.py
-```
+## Attribution and licenses
 
-The builder writes exactly these public filenames:
-
-- `hosts.txt`
-- `abp.txt`
-- `hosts-slim.txt`
-- `abp-slim.txt`
-
-It also writes:
-
-- `build-report.json`
-- `SHA256SUMS`
-
-## Repository layout
-
-```text
-.
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── false-positive.yml
-│   │   └── source-request.yml
-│   ├── workflows/
-│   │   ├── build.yml
-│   │   └── ci.yml
-│   └── dependabot.yml
-├── scripts/
-│   └── prune_releases.py
-├── tests/
-│   ├── test_update.py
-│   ├── test_audit_dns.py
-│   └── test_prune_releases.py
-├── audit_dns.py
-├── update.py
-├── requirements.txt
-├── README.md
-├── SOURCES.md
-├── CONTRIBUTING.md
-├── CHANGELOG.md
-├── COPY-TO-REPO.md
-├── .editorconfig
-├── .gitattributes
-└── .gitignore
-```
-
-## Sources, false positives and support
-
-Each upstream source owns its inclusion policy and data quality. Use `build-report.json` to identify which source contributed a hostname; report a false positive to the source that supplied it. The aggregate is not a guarantee that every listed domain is malicious or that every ad will be blocked.
-
-For a router, choose the format supported by its DNS/blocking software and test the list on your device before enabling it for every client. Keep a way to disable the list locally if a critical service is unexpectedly affected.
+See [SOURCES.md](SOURCES.md) and [licenses/](licenses/). The generated lists contain data maintained by upstream projects; this repository does not claim ownership of those entries. HaGeZi and OISD publish their lists under GPL-3.0 and their license texts are included here. GoodbyeAds' repository is MIT-licensed, but its source catalog lists upstream feeds with differing terms. The Schakal forum post links to the public list but no explicit redistribution license was identified in the reviewed post; verify applicable terms or obtain permission before distributing derived data publicly. Do not assume that the code license automatically licenses every upstream data source.

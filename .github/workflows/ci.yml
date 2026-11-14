@@ -1,7 +1,6 @@
 name: Test builder
 
 on:
-  pull_request:
   push:
     branches: [main]
     paths:
@@ -9,24 +8,53 @@ on:
       - "audit_dns.py"
       - "requirements.txt"
       - "tests/**"
-      - "SOURCES.md"
-      - ".github/workflows/ci.yml"
+      - "scripts/**"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "update.py"
+      - "audit_dns.py"
+      - "requirements.txt"
+      - "tests/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: test-builder-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.txt
-      - run: python -m pip install --disable-pip-version-check -r requirements.txt
-      - run: |
-          python -m py_compile update.py audit_dns.py scripts/prune_releases.py
-          python -m unittest discover -s tests -v
-          git diff --check
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+      - name: Compile
+        run: python -m compileall -q update.py audit_dns.py scripts tests
+      - name: Offline self-tests
+        run: python update.py --self-test
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Check whitespace in the submitted changes
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          elif [[ -n "${{ github.event.before }}" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --check "${{ github.event.before }}...HEAD"
+          else
+            git diff --check HEAD^ HEAD
+          fi

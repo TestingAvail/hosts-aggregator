@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Non-destructive DNS audit for a generated hosts file.
+"""Non-destructive DNS diagnostics for generated blocklists.
 
-Only a name returning NXDOMAIN from both Google Public DNS and Cloudflare DNS
-is marked CONFIRMED_NXDOMAIN. No entries are deleted or rewritten.
+This tool NEVER edits, removes, or rewrites any blocklist entry. NXDOMAIN,
+NODATA, SERVFAIL and timeout are reported separately because DNS absence alone
+is not proof that a blocklist entry is stale or useless.
 """
 from __future__ import annotations
 
@@ -10,177 +11,204 @@ import argparse
 import asyncio
 import csv
 import ipaddress
-import json
-import time
+import random
+import re
+import sys
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
+from typing import Iterable
 
-import aiohttp
+try:
+    import dns.asyncresolver
+    import dns.exception
+    import dns.resolver
+except ImportError as exc:  # pragma: no cover - exercised by environment
+    raise SystemExit("Install requirements first: python3 -m pip install -r requirements.txt") from exc
 
-GOOGLE_DOH = "https://dns.google/resolve"
-CLOUDFLARE_DOH = "https://cloudflare-dns.com/dns-query"
-
-
-def load_domains(paths: list[Path]) -> list[str]:
-    domains: set[str] = set()
-    for path in paths:
-        with path.open("r", encoding="utf-8", errors="replace") as stream:
-            for raw in stream:
-                line = raw.strip()
-                if not line or line.startswith(("#", "!", "[")):
-                    continue
-                if line.startswith("||") and line.endswith("^"):
-                    candidates = [line[2:-1]]
-                else:
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        try:
-                            ipaddress.ip_address(parts[0])
-                            candidates = []
-                            for token in parts[1:]:
-                                if token.startswith(("#", "!")):
-                                    break
-                                candidates.append(token)
-                        except ValueError:
-                            candidates = [parts[0]] if len(parts) == 1 else []
-                    elif len(parts) == 1:
-                        candidates = [parts[0]]
-                    else:
-                        candidates = []
-                for candidate in candidates:
-                    domain = candidate.rstrip(".").lower()
-                    if "." in domain and len(domain) <= 253:
-                        domains.add(domain)
-    return sorted(domains)
+LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
-async def doh_query(session: aiohttp.ClientSession, endpoint: str, domain: str) -> tuple[str, str]:
-    headers = {"Accept": "application/dns-json"}
-    params = {"name": domain, "type": "A"}
+def normalize_domain(value: str) -> str | None:
+    value = value.strip().lower().rstrip(".")
+    if not value:
+        return None
+    if not value.isascii():
+        try:
+            value = value.encode("idna").decode("ascii")
+        except UnicodeError:
+            return None
     try:
-        async with session.get(endpoint, params=params, headers=headers) as response:
-            if response.status != 200:
-                return "HTTP_ERROR", f"HTTP {response.status}"
-            payload = await response.json(content_type=None)
-        status = payload.get("Status")
-        answers = payload.get("Answer") or []
-        if status == 3:
-            return "NXDOMAIN", "DNS status 3"
-        if status == 0 and answers:
-            return "RESOLVES", f"{len(answers)} answer(s)"
-        if status == 0:
-            return "NODATA", "NOERROR without A answer"
-        if status == 2:
-            return "SERVFAIL", "DNS status 2"
-        return "DNS_ERROR", f"DNS status {status!r}"
-    except asyncio.TimeoutError:
-        return "TIMEOUT", "request timed out"
-    except (aiohttp.ClientError, ValueError, json.JSONDecodeError) as error:
-        return "ERROR", str(error)[:200]
+        ipaddress.ip_address(value)
+        return None
+    except ValueError:
+        pass
+    if len(value) > 253:
+        return None
+    labels = value.split(".")
+    if len(labels) < 2 or any(not x or len(x) > 63 or not LABEL.fullmatch(x) for x in labels):
+        return None
+    return value
 
 
-async def audit_one(session, semaphore, domain):
+def extract_domains(lines: Iterable[str]) -> set[str]:
+    """Extract domain names from hosts, ABP and wildcard-domain text formats."""
+    found: set[str] = set()
+    for raw in lines:
+        line = raw.strip().lstrip("\ufeff")
+        if not line or line.startswith(("#", "!", "[", "@@")):
+            continue
+        if " #" in line:
+            line = line.split(" #", 1)[0].strip()
+        if " !" in line:
+            line = line.split(" !", 1)[0].strip()
+        if line.startswith("||"):
+            match = re.fullmatch(r"\|\|([a-z0-9.-]+)\^(?:\$important)?", line, re.I)
+            if match:
+                domain = normalize_domain(match.group(1))
+                if domain:
+                    found.add(domain)
+            continue
+        if line.startswith("*."):
+            domain = normalize_domain(line[2:])
+            if domain:
+                found.add(domain)
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            try:
+                ipaddress.ip_address(parts[0])
+                for token in parts[1:]:
+                    if token.startswith(("#", "!")):
+                        break
+                    domain = normalize_domain(token)
+                    if domain:
+                        found.add(domain)
+                continue
+            except ValueError:
+                pass
+        if len(parts) == 1:
+            domain = normalize_domain(parts[0])
+            if domain:
+                found.add(domain)
+    return found
+
+
+def classify_observations(observations: dict[str, str]) -> str:
+    """Classify per-resolver A/AAAA outcomes without making deletion decisions."""
+    values = [str(v).upper() for v in observations.values()]
+    if any(v == "ANSWER" for v in values):
+        return "RESOLVES"
+    # Only two independent resolvers reporting NXDOMAIN for both A and AAAA
+    # makes this a confirmed NXDOMAIN observation.
+    resolver_names = sorted({key.split(":", 1)[0] for key in observations})
+    if len(resolver_names) >= 2 and all(
+        observations.get(f"{resolver}:A") == "NXDOMAIN"
+        and observations.get(f"{resolver}:AAAA") == "NXDOMAIN"
+        for resolver in resolver_names
+    ):
+        return "CONFIRMED_NXDOMAIN"
+    if values and all(v in {"NODATA", "NXDOMAIN"} for v in values):
+        return "NO_ADDRESS_RECORD"
+    return "INDETERMINATE"
+
+
+async def query_one(
+    domain: str,
+    nameserver: str,
+    record_type: str,
+    timeout: float,
+) -> str:
+    resolver = dns.asyncresolver.Resolver(configure=False)
+    resolver.nameservers = [nameserver]
+    resolver.timeout = timeout
+    try:
+        await resolver.resolve(domain, record_type, lifetime=timeout, search=False)
+        return "ANSWER"
+    except dns.resolver.NXDOMAIN:
+        return "NXDOMAIN"
+    except dns.resolver.NoAnswer:
+        return "NODATA"
+    except dns.resolver.NoNameservers:
+        return "SERVFAIL"
+    except dns.exception.Timeout:
+        return "TIMEOUT"
+    except Exception as exc:  # Keep unexpected network errors visible in CSV.
+        return f"ERROR:{type(exc).__name__}"
+
+
+async def audit_domain(
+    domain: str,
+    resolvers: list[str],
+    timeout: float,
+    semaphore: asyncio.Semaphore,
+) -> dict[str, str]:
     async with semaphore:
-        google_status, google_detail = await doh_query(session, GOOGLE_DOH, domain)
-        cloudflare_status = "NOT_QUERIED"
-        cloudflare_detail = ""
-        # Only spend the second query on a possible NXDOMAIN. A single
-        # resolver's NXDOMAIN is never enough to flag a domain as dead.
-        if google_status == "NXDOMAIN":
-            cloudflare_status, cloudflare_detail = await doh_query(
-                session, CLOUDFLARE_DOH, domain
-            )
-        if google_status == "RESOLVES":
-            verdict = "RESOLVES"
-        elif google_status == "NXDOMAIN" and cloudflare_status == "NXDOMAIN":
-            verdict = "CONFIRMED_NXDOMAIN"
-        elif google_status == "NODATA":
-            verdict = "NODATA"
-        elif cloudflare_status == "RESOLVES":
-            verdict = "RESOLVES"
-        else:
-            verdict = "INCONCLUSIVE"
-        return {
-            "domain": domain,
-            "verdict": verdict,
-            "google_dns": google_status,
-            "cloudflare_dns": cloudflare_status,
-            "google_detail": google_detail,
-            "cloudflare_detail": cloudflare_detail,
+        tasks = {
+            f"{resolver}:{rtype}": query_one(domain, resolver, rtype, timeout)
+            for resolver in resolvers for rtype in ("A", "AAAA")
         }
+        results = await asyncio.gather(*tasks.values())
+        observations = dict(zip(tasks.keys(), results))
+        return {"domain": domain, **observations, "classification": classify_observations(observations)}
 
 
-async def main_async(args):
-    domains = load_domains([Path(item) for item in args.input])
-    if args.limit:
-        domains = domains[: args.limit]
-    timeout = aiohttp.ClientTimeout(total=args.timeout, connect=min(15, args.timeout))
-    connector = aiohttp.TCPConnector(limit=args.concurrency, ttl_dns_cache=300)
+async def main_async(args: argparse.Namespace) -> int:
+    domains: set[str] = set()
+    for file_path in args.files:
+        path = Path(file_path)
+        if not path.is_file():
+            raise SystemExit(f"Input file not found: {path}")
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            domains.update(extract_domains(stream))
+    ordered = sorted(domains)
+    if args.limit and len(ordered) > args.limit:
+        ordered = sorted(random.Random(args.seed).sample(ordered, args.limit))
+
+    resolvers = [x.strip() for x in args.resolvers.split(",") if x.strip()]
+    if len(resolvers) < 2:
+        raise SystemExit("Use at least two independent resolvers, comma-separated.")
     semaphore = asyncio.Semaphore(args.concurrency)
-    started = time.monotonic()
+    print(f"DNS audit: {len(ordered):,} hostnames; resolvers={','.join(resolvers)}; timeout={args.timeout}s")
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["domain"] + [f"{resolver}:{rtype}" for resolver in resolvers for rtype in ("A", "AAAA")] + ["classification"]
     counts = Counter()
-    confirmed_nxdomain = []
+    batch_size = max(args.concurrency * 8, 256)
     audited = 0
-    csv_path = Path(args.output)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["domain", "verdict", "google_dns", "cloudflare_dns", "google_detail", "cloudflare_detail"]
-    async with aiohttp.ClientSession(
-        connector=connector,
-        timeout=timeout,
-        headers={"User-Agent": "HostsAggregator-DNS-Audit/1.0"},
-    ) as session, csv_path.open("w", encoding="utf-8", newline="") as stream:
+    with output.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields)
         writer.writeheader()
-        # Process bounded batches: do not create hundreds of thousands of
-        # asyncio tasks at once for a large router list.
-        batch_size = max(args.concurrency * 8, 256)
-        for start in range(0, len(domains), batch_size):
-            batch = domains[start : start + batch_size]
-            batch_results = await asyncio.gather(
-                *(audit_one(session, semaphore, domain) for domain in batch)
-            )
-            writer.writerows(batch_results)
-            for item in batch_results:
-                counts[item["verdict"]] += 1
-                if item["verdict"] == "CONFIRMED_NXDOMAIN":
-                    confirmed_nxdomain.append(item["domain"])
-            audited += len(batch_results)
-            print(f"DNS audit: {audited:,}/{len(domains):,}")
-
-    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    summary = {
-        "generated_at_utc": generated_at,
-        "input_files": args.input,
-        "audited_domains": audited,
-        "duration_seconds": round(time.monotonic() - started, 2),
-        "counts": dict(sorted(counts.items())),
-        "confirmed_nxdomain_domains": confirmed_nxdomain,
-        "policy": "Non-destructive audit only. No domains are removed automatically.",
-        "warning": "CONFIRMED_NXDOMAIN is a review candidate, not proof that a blocklist entry should be deleted. A domain may be reused or intentionally have no A record.",
-    }
-    summary_path = csv_path.with_name("dns-audit-summary.json")
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"\nDNS audit complete: {audited:,} domains")
-    for verdict, count in sorted(counts.items()):
-        print(f"  {verdict}: {count:,}")
-    print(f"CSV: {csv_path}")
-    print(f"Summary: {summary_path}")
-    print("No blocklist entries were deleted.")
+        for start in range(0, len(ordered), batch_size):
+            batch = ordered[start:start + batch_size]
+            rows = await asyncio.gather(*(
+                audit_domain(domain, resolvers, args.timeout, semaphore) for domain in batch
+            ))
+            writer.writerows(rows)
+            counts.update(row["classification"] for row in rows)
+            audited += len(rows)
+            print(f"DNS audit: {audited:,}/{len(ordered):,}")
+    print("\nClassification summary (diagnostic only; nothing is removed):")
+    for label in ("RESOLVES", "CONFIRMED_NXDOMAIN", "NO_ADDRESS_RECORD", "INDETERMINATE"):
+        print(f"  {label:<22} {counts.get(label, 0):>9,}")
+    print(f"Report: {output}")
+    print("IMPORTANT: Do not automatically delete entries based on this audit.")
+    return 0
 
 
-def parse_args():
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", nargs="+", default=["hosts.txt"], help="hosts/AdGuard list file(s)")
-    parser.add_argument("--output", default="dns-audit.csv", help="CSV output path")
-    parser.add_argument("--limit", type=int, default=0, help="audit only the first N domains (0 = all)")
-    parser.add_argument("--concurrency", type=int, default=48, help="parallel DNS-over-HTTPS requests")
-    parser.add_argument("--timeout", type=float, default=8.0, help="per-request timeout in seconds")
+    parser.add_argument("--files", nargs="+", default=["hosts.txt", "hosts-slim.txt"], help="input hosts/ABP files")
+    parser.add_argument("--output", default="dns-audit.csv")
+    parser.add_argument("--limit", type=int, default=10000, help="deterministic sample cap; use 0 for all")
+    parser.add_argument("--seed", type=int, default=41014)
+    parser.add_argument("--concurrency", type=int, default=100)
+    parser.add_argument("--timeout", type=float, default=1.5)
+    parser.add_argument("--resolvers", default="1.1.1.1,8.8.8.8")
     args = parser.parse_args()
-    if args.concurrency < 1 or args.timeout <= 0 or args.limit < 0:
-        parser.error("concurrency/timeout must be positive and limit must be >= 0")
-    return args
+    if args.limit < 0 or args.concurrency < 1 or args.timeout <= 0:
+        parser.error("limit must be >=0, concurrency >=1 and timeout >0")
+    return asyncio.run(main_async(args))
 
 
 if __name__ == "__main__":
-    asyncio.run(main_async(parse_args()))
+    raise SystemExit(main())
