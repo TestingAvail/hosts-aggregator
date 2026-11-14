@@ -1,145 +1,128 @@
-# Hosts Aggregator
+# 🛡️ Hosts Aggregator
 
-A GitHub Actions-powered aggregator that builds router-ready **FAT** and **SLIM** DNS blocklists in two output formats:
+[![Build](https://img.shields.io/github/actions/workflow/status/TestingAvail/hosts-aggregator/build.yml?branch=main&label=build&logo=github-actions)](https://github.com/TestingAvail/hosts-aggregator/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/TestingAvail/hosts-aggregator/ci.yml?branch=main&label=tests&logo=github-actions)](https://github.com/TestingAvail/hosts-aggregator/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-- `hosts.txt` / `hosts-slim.txt` — traditional hosts mappings (`0.0.0.0 hostname`). These block only the listed hostnames; a hosts file cannot express a wildcard for unknown subdomains.
-- `abp.txt` / `abp-slim.txt` — AdGuard DNS filtering syntax. Domain-tree rules use `||example.org^`; exact-host rules are emitted as bare `example.org`. The builder preserves the source rule's scope instead of widening every host entry into a subtree rule.
+Автоматически собираемые DNS-блок-листы для роутеров, AdGuard Home и других совместимых фильтров. GitHub Actions ежедневно загружает проверенные публичные источники, объединяет их, удаляет дубликаты и публикует готовые списки в форматах **hosts** и **AdGuard DNS**.
 
-The project is designed to do expensive download, parsing, de-duplication, validation and report generation on GitHub-hosted runners. Routers only download finished text files.
+## 📥 Скачать списки
 
-## Stable router URLs
+Ссылки на файлы в `main` постоянные: имя и адрес не меняются при ежедневном обновлении.
 
-These URLs and file names are intentionally preserved:
+| Профиль | Hosts | AdGuard DNS |
+| :--- | :--- | :--- |
+| **FAT** — максимальное покрытие | [hosts.txt](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts.txt) | [abp.txt](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp.txt) |
+| **SLIM** — облегчённый вариант | [hosts-slim.txt](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts-slim.txt) | [abp-slim.txt](https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp-slim.txt) |
 
-| Profile | Hosts | AdGuard DNS |
-|---|---|---|
-| FAT | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts.txt> | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp.txt> |
-| SLIM | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/hosts-slim.txt> | <https://raw.githubusercontent.com/TestingAvail/hosts-aggregator/main/abp-slim.txt> |
+Те же файлы доступны в [последнем релизе](https://github.com/TestingAvail/hosts-aggregator/releases/latest). Там же публикуются отчёт сборки, контрольные суммы, карта происхождения правил и сведения об источниках.
 
-Release assets (latest successful release):
-
-- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/hosts.txt>
-- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/abp.txt>
-- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/hosts-slim.txt>
-- <https://github.com/TestingAvail/hosts-aggregator/releases/latest/download/abp-slim.txt>
-
-The release additionally includes `build-report.json`, `SHA256SUMS`, `source-map.tsv.gz`, `sources.json`, `SOURCES.md`, `DATA-LICENSING.md`, and third-party license notices. `SHA256SUMS` covers the four router files and `build-report.json`; the compressed source map has its own SHA-256 recorded in the report. The build report and source map are not router blocklists.
-
-## Profiles
+## 🎚️ Какой профиль выбрать
 
 ### FAT
 
-A high-coverage profile for routers with sufficient memory/CPU:
+Максимальное покрытие для устройств с достаточным запасом памяти и производительности:
 
-- HaGeZi Pro++ wildcard-domain feed.
-- HaGeZi Pro++ legacy hosts expansion for known subdomains in the hosts output.
-- HaGeZi TIF Medium threat-intelligence companion.
-- OISD Big in its `domainswild` format.
-- AdAway hosts for mobile ads and analytics (CC BY 3.0; last content change 2023-04-29, retained only while its unique contribution justifies it).
-- Peter Lowe's Ad and Tracking Server List (the publisher explicitly permits combining and republishing).
-- NoCoin hosts for browser-based cryptomining (FAT only; header data timestamp 2025-03-05, with a 2026-09-12 file change removing one entry).
+- HaGeZi Pro++ и расширение известных хостов;
+- HaGeZi TIF Medium — дополнительный список threat intelligence;
+- OISD Big;
+- AdAway и Peter Lowe — реклама и трекеры;
+- NoCoin — известные домены браузерного криптомайнинга.
 
-FAT is intentionally aggressive and memory-heavier. TIF Medium is substantially larger than TIF Mini. Use it only on higher-capacity routers; for AdGuard Home, HaGeZi notes that TIF Medium needs at least 1 GB RAM. It can still block legitimate or dual-use services, so test it on a subset of devices.
+FAT агрессивнее и может чаще задевать легитимные или используемые одновременно для разных целей сервисы. Для AdGuard Home HaGeZi указывает требование не менее 1 ГБ ОЗУ для TIF Medium. Перед развёртыванием на всей сети лучше проверить список на нескольких устройствах.
 
 ### SLIM
 
-A smaller compatibility-oriented profile:
+Более компактный профиль для обычных роутеров и сценариев, где важнее совместимость:
 
-- HaGeZi Light wildcard-domain feed.
-- HaGeZi Light legacy hosts expansion.
-- HaGeZi TIF Mini.
-- OISD Small in its `domainswild` format.
-- AdAway hosts.
-- Peter Lowe's Ad and Tracking Server List.
+- HaGeZi Light и расширение известных хостов;
+- HaGeZi TIF Mini;
+- OISD Small;
+- AdAway и Peter Lowe.
 
-OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM keeps the smaller HaGeZi Light tier and TIF Mini while sharing the two direct supplemental feeds above. NoCoin stays FAT-only because its upstream data timestamp is older.
+SLIM — разумный вариант по умолчанию для устройств с ограниченной памятью. OISD Big и OISD Small используются как альтернативные уровни, а не складываются друг с другом.
 
-## Important rule semantics
+## 🧩 Форматы и правила
 
-The builder stores two rule scopes:
+Доступны два формата:
 
-- **exact** — only this fully qualified hostname;
-- **tree** — the hostname and all subdomains.
+- **Hosts** (`hosts.txt`) — записи вида `0.0.0.0 hostname`. Они блокируют конкретные известные имена. Формат hosts не умеет задавать wildcard для всех поддоменов; расширения HaGeZi добавляют известные имена, но не могут заранее покрыть неизвестные динамические поддомены.
+- **AdGuard DNS** (`abp.txt`) — сохраняет область действия исходного правила. `||example.org^` блокирует домен и его поддомены, а `example.org` — только точное имя.
 
-Source formats are interpreted explicitly:
+Поэтому для полноценной блокировки доменного дерева выбирайте **AdGuard DNS-формат**, если фильтр на роутере его поддерживает. Если устройство принимает только hosts-файлы, используйте соответствующий файл FAT или SLIM.
 
-- `0.0.0.0 ads.example.org` → exact.
-- plain hosts/domain entries → the source's declared default scope.
-- `*.example.org` in OISD `domainswild` → tree.
-- `||example.org^` → tree.
-- ABP rules with resource-type or other modifiers are discarded rather than broadened.
-- ABP exceptions are not imported as block entries.
+Сборщик различает правила **exact** и **tree**, не расширяет каждое точное имя до всего домена и не импортирует исключения источников как блокировки. ABP-правила с неподдерживаемыми модификаторами отбрасываются, а не преобразуются в более широкие правила.
 
-The AdGuard output keeps exact and tree scopes distinct. An exact entry under an existing tree rule is omitted as redundant. Hosts output contains all known hostnames as exact mappings, including hostnames explicitly enumerated by legacy hosts sources. **No hosts-format list can block arbitrary future/dynamic subdomains. HaGeZi explicitly warns that its legacy hosts/subdomain outputs are only partial for generic, dynamic or previously unknown subdomains; we use them only as best-effort expansion, not as equivalent wildcard protection.** For full wildcard coverage, use `abp.txt` with an AdGuard-compatible DNS blocker, or another router DNS engine that supports wildcard domain rules.
+## 🗂️ Источники
 
-## Google / AI Studio and application compatibility
+В активных профилях используются:
 
-The builder protects Google infrastructure and AI Studio/Gemini/auth/connectivity zones from broad imported tree rules. It also applies the exact-host compatibility exceptions supplied for YouTube history and icons, Google suggestions/video delivery, UC Browser services, Google fonts, Spotify Connect, Sberbank compatibility, GitHub-related S3 downloads, and KDE theme downloads.
+- **HaGeZi** — основные рекламные, трекинговые и threat-intelligence-списки;
+- **OISD** — дополнительные списки рекламы и нежелательных доменов;
+- **AdAway** — мобильная реклама и аналитика;
+- **Peter Lowe** — рекламные и отслеживающие серверы;
+- **NoCoin** — криптомайнинг, только в FAT.
 
-These are narrow exact-host exceptions rather than provider-wide allowlists. The existing reviewed exact exceptions `www.baihe.com`, `jobs.sciencecareers.org` and `cardlytics.com` remain narrow as well.
+Для отдельных известных рекламных и аналитических адресов добавлены узкие ручные правила, в том числе для некоторых российских endpoints VK, Mail.ru и Яндекса. Это не отдельный полноценный RU-фид и не обещание блокировать всю рекламу этих платформ: сами сервисные домены целиком не блокируются.
 
-AdGuard output emits exact-host exceptions as bare-domain exception rules such as `@@s.youtube.com`; these match the named hostname without automatically allowing every subdomain. It additionally contains the wildcard exception `@@||mini5*.opera-mini.net^`, which also covers subdomains of matching Opera Mini hostnames. A regular hosts file cannot express a wildcard exception; it omits known matching hostnames found in the downloaded feeds, while the AdGuard format preserves the wildcard for future names.
+Полный реестр источников, лицензий, разрешений и исключённых списков находится в [SOURCES.md](SOURCES.md) и [sources.json](sources.json). Полные списки Schakal и пользовательские списки из 4PDA не включены в публичную сборку, пока не будет подтверждено право на их распространение.
 
-HaGeZi's standard tiers already include its Native Tracker categories at the tier's chosen strength; we do not add the same device feeds again as separate sources.
+## ⚙️ Как это работает
 
-## Reliability and publication
+1. GitHub Actions запускает сборку ежедневно в **12:17 UTC**. Её также можно запустить вручную или изменением файлов сборщика и конфигурации в `main`.
+2. Перед загрузкой проверяется реестр источников: каждый активный фид должен иметь подтверждённое основание для публичного распространения, атрибуцию и совпадающие настройки.
+3. Источники скачиваются и разбираются в соответствии с объявленным форматом. Сборщик объединяет правила, удаляет дубликаты, применяет исключения и формирует FAT и SLIM.
+4. Тесты, проверки выходных файлов и SHA-256 должны пройти до публикации.
+5. Готовые списки коммитятся в `main` и выкладываются в [GitHub Releases](https://github.com/TestingAvail/hosts-aggregator/releases).
 
-- All configured sources must either download successfully or have a checksum-verified cached snapshot no older than 14 days. Otherwise the build stops and existing public files/releases remain untouched.
-- A suspicious source shrink greater than 50% is rejected and the previous good snapshot is used when available. A manual workflow option can accept a reviewed upstream shrink.
-- There is no silent partial build.
-- FAT and SLIM are both built before publication; if either profile fails, neither output generation is published.
-- Files are staged and published with rollback on filesystem errors.
-- `build-report.json` records source status, license/permission references, attribution, per-source counts, exact/tree counts, overlaps, output sizes and SHA-256 values.
-- `sources.json` is the machine-readable source/rights registry. The public builder fails closed if any configured feed lacks approved redistribution metadata or differs from the registry.
-- The release also contains source inventories and the applicable third-party license notices.
-- `source-map.tsv.gz` records `profile`, `source_id`, `license_id`, `domain`, and `scope` for every source-derived entry.
-- `audit_dns.py` is diagnostic only. It compares A/AAAA responses via two independent resolvers and reports `RESOLVES`, `CONFIRMED_NXDOMAIN`, `NO_ADDRESS_RECORD`, or `INDETERMINATE`. It never removes a domain. A domain with no A/AAAA record is not necessarily dead (it may be a non-resolving parent with working subdomains).
-- A failed DNS lookup, one timeout, SERVFAIL, or NODATA must never trigger automatic deletion.
+Сборка не публикует неполный результат: если обязательный источник недоступен и нет подходящего проверенного кэша, либо не проходит проверка, предыдущие рабочие файлы остаются на месте. Последние успешные снимки источников могут использоваться не дольше 14 дней. Подозрительное сокращение списка более чем на 50% требует отдельного ручного подтверждения.
 
-## GitHub Actions
+Workflow CI проверяет код и конфигурацию в Pull Request и может собрать предварительные файлы как артефакт. Предварительная сборка не публикуется в рабочие ссылки и релизы.
 
-`.github/workflows/build.yml`:
+## ⚠️ Ограничения и ложные срабатывания
 
-- runs on pushes to builder/config/docs paths;
-- runs daily at **12:17 UTC**, after HaGeZi's published daily update window (scheduled jobs can still be delayed by GitHub);
-- consumes only feeds listed in `sources.json` as approved for public redistribution; Schakal's full feed and user-contributed 4PDA lists remain excluded pending documented permission (narrow compatibility exceptions are maintained separately in `update.py`);
-- supports `workflow_dispatch`, including an explicit confirmation switch for a reviewed source shrink;
-- runs tests before source downloads/build;
-- caches last successful source snapshots;
-- commits the four stable output files plus `build-report.json` and `SHA256SUMS` to `main`;
-- publishes a GitHub Release with the same four stable filenames and audit metadata;
-- keeps the newest 30 releases.
+Это DNS-фильтрация по доменам, а не косметический фильтр страниц. Она хорошо подходит для блокировки запросов к известным рекламным, аналитическим и вредоносным доменам, но не может гарантированно убрать:
 
-`.github/workflows/ci.yml` runs offline tests on builder changes and pull requests. Keep your separate `pages-build-deployment` workflow; this package does not replace or remove it. Dependabot is configured for GitHub Actions and pip updates.
+- рекламу, которая загружается с того же домена, что и основной контент;
+- встроенные рекламные публикации и спонсорские материалы;
+- всю рекламу в YouTube, приложениях и стриминговых сервисах;
+- новые рекламные домены, ещё не попавшие в источники.
 
-For the `GITHUB_TOKEN` release/push steps, repository Actions permissions must allow read and write access to contents. Public-repository GitHub-hosted runners are used; GitHub still has per-job execution limits and scheduled-run delays.
+Блокировка домена может нарушить отдельную функцию сайта или приложения. В сборщике есть проверенные защитные зоны и узкие исключения для совместимости, но они не гарантируют работу каждого сервиса во всех сценариях. Для начала используйте SLIM или тестируйте FAT на ограниченной группе устройств. При необходимости можно добавить собственное исключение на стороне DNS-фильтра.
 
-## Local use
+## 🛠️ Локальная сборка
 
-Python 3.13 is recommended.
+Рекомендуется Python 3.13.
 
 ```bash
+git clone https://github.com/TestingAvail/hosts-aggregator.git
+cd hosts-aggregator
+
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+
+# Проверить политику источников и метаданные
 .venv/bin/python update.py --check-source-policy
+
+# Запустить встроенные и модульные тесты
 .venv/bin/python update.py --self-test
 .venv/bin/python -m unittest discover -s tests -v
+
+# Посмотреть источники и собрать списки
 .venv/bin/python update.py --list-sources
 .venv/bin/python update.py
 ```
 
-Optional DNS diagnostic sample (never edits lists):
+Необязательная DNS-диагностика (ничего не удаляет и не меняет в списках):
 
 ```bash
 python3 audit_dns.py --files hosts.txt hosts-slim.txt --limit 10000 --concurrency 100 --output dns-audit.csv
 ```
 
-Use `--limit 0` only when intentionally auditing every hostname; this can take significant time and generate many DNS queries.
+## 📜 Лицензии и атрибуция
 
-## Before relying on a new release
+Код сборщика распространяется под MIT — см. [LICENSE](LICENSE). Эта лицензия **не распространяется автоматически** на сторонние фиды и их данные.
 
-A green build proves that source parsing, safeguards and publication steps succeeded; it does not prove that every website will work for every household or that every new malicious hostname is covered. Test FAT first on a small subset of devices and keep a rollback URL. SLIM is the safer default for low-memory routers. Prefer the AdGuard format wherever the router's DNS software supports it.
+Для каждого активного источника в [sources.json](sources.json) зафиксированы лицензия или разрешение издателя, ссылка на первоисточник и требуемая атрибуция. Подробности и приложенные уведомления находятся в [DATA-LICENSING.md](DATA-LICENSING.md), [SOURCES.md](SOURCES.md) и каталоге [licenses/](licenses/). Публичная сборка останавливается, если проверка прав источника не проходит.
 
-## Attribution and licenses
-
-See [SOURCES.md](SOURCES.md), [sources.json](sources.json), [DATA-LICENSING.md](DATA-LICENSING.md) and [licenses/](licenses/). The root MIT license applies to the original builder code; it does not relicense third-party feeds or generated data. Every active source has a recorded license or explicit publisher permission and attribution. Aggregator-level licenses are not treated as blanket permission for independent upstream data.
+Сведения о составе и результате каждой сборки: [build-report.json](build-report.json), [SHA256SUMS](SHA256SUMS) и `source-map.tsv.gz` в последнем релизе.
