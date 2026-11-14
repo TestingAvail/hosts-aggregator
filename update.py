@@ -35,7 +35,7 @@ from typing import Callable, Iterable, TextIO
 
 import aiohttp
 
-VERSION = "4.2.1"
+VERSION = "4.2.2"
 ROOT = Path(__file__).resolve().parent
 CACHE_DIR = Path(os.environ.get("SOURCE_CACHE_DIR", ROOT / ".source-cache"))
 CACHE_MAX_AGE_DAYS = int(os.environ.get("SOURCE_CACHE_MAX_AGE_DAYS", "14"))
@@ -64,6 +64,7 @@ class Source:
     primary: bool = False
     purpose: str = "general"
     notes: str = ""
+    fallback_urls: tuple[str, ...] = ()
 
 
 HAGEZI_MAIN = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
@@ -110,7 +111,9 @@ FAT_SOURCES = [
 
 SCHAKAL_SOURCE = Source(
     "schakal-full-hosts", "Schakal full hosts", "https://schakal.ru/hosts/hosts.txt",
-    SCOPE_EXACT, False, "community-hosts", "Default FAT exact-host supplement; disable only for a manual run.",
+    SCOPE_EXACT, False, "community-hosts",
+    "Default FAT exact-host supplement; uses the community-documented hopto.org mirror if the primary host is unreachable.",
+    ("https://schakal.hopto.org/hosts.txt",),
 )
 if ENABLE_SCHAKAL_SOURCE:
     FAT_SOURCES.append(SCHAKAL_SOURCE)
@@ -574,7 +577,10 @@ def read_cache(source: Source, force_roots: set[str]) -> tuple[Path, dict] | Non
         if age.total_seconds() < 0 or age.total_seconds() > CACHE_MAX_AGE_DAYS * 86400:
             print(f"CACHE EXPIRED {source.name}: {age.days} days")
             return None
-        if meta.get("url") != source.url or not data_path.is_file() or sha256_file(data_path) != meta.get("sha256"):
+        if (meta.get("url") != source.url
+                or meta.get("fallback_urls", []) != list(source.fallback_urls)
+                or not data_path.is_file()
+                or sha256_file(data_path) != meta.get("sha256")):
             print(f"CACHE INVALID {source.name}: metadata/checksum mismatch")
             return None
         fd, temp_name = tempfile.mkstemp(prefix="cache-normalized-", suffix=".txt")
@@ -609,11 +615,12 @@ def read_cache(source: Source, force_roots: set[str]) -> tuple[Path, dict] | Non
         return None
 
 
-async def download_source(
+async def _download_source_url(
     session: aiohttp.ClientSession,
     source: Source,
     semaphore: asyncio.Semaphore,
     force_roots: set[str],
+    url: str,
 ) -> tuple[Path, int]:
     headers = {
         "User-Agent": f"HostsAggregator/{VERSION} (+https://github.com/TestingAvail/hosts-aggregator)",
@@ -624,7 +631,7 @@ async def download_source(
         for attempt in range(DOWNLOAD_ATTEMPTS):
             spool_path: Path | None = None
             try:
-                async with session.get(source.url, headers=headers, timeout=REQUEST_TIMEOUT) as response:
+                async with session.get(url, headers=headers, timeout=REQUEST_TIMEOUT) as response:
                     if response.status != 200:
                         raise aiohttp.ClientResponseError(
                             response.request_info, response.history,
@@ -676,12 +683,34 @@ async def download_source(
                     spool_path.unlink(missing_ok=True)
                 status = error.status if isinstance(error, aiohttp.ClientResponseError) else None
                 retryable = status is None or status in {408, 425, 429} or (status is not None and status >= 500)
-                print(f"Download failed {source.name} ({attempt + 1}/{DOWNLOAD_ATTEMPTS}): {error}")
+                print(f"Download failed {source.name} at {url} ({attempt + 1}/{DOWNLOAD_ATTEMPTS}): {error}")
                 if not retryable:
                     break
                 if attempt + 1 < DOWNLOAD_ATTEMPTS:
                     await asyncio.sleep(1.5 * (2 ** attempt) + 0.25)
         raise RuntimeError(f"{source.name}: {last_error}")
+
+
+
+async def download_source(
+    session: aiohttp.ClientSession,
+    source: Source,
+    semaphore: asyncio.Semaphore,
+    force_roots: set[str],
+) -> tuple[Path, int]:
+    """Try the canonical source URL, then any documented mirrors."""
+    failures: list[str] = []
+    for index, url in enumerate((source.url, *source.fallback_urls)):
+        try:
+            result = await _download_source_url(session, source, semaphore, force_roots, url)
+            if index:
+                print(f"OK {source.name}: recovered via fallback URL {url}")
+            return result
+        except Exception as error:
+            failures.append(f"{url}: {error}")
+            if index + 1 < 1 + len(source.fallback_urls):
+                print(f"Trying fallback URL for {source.name}: {source.fallback_urls[index]}")
+    raise RuntimeError(f"{source.name}: all configured URLs failed: {'; '.join(failures)}")
 
 
 async def fetch_source(
@@ -714,6 +743,7 @@ async def fetch_source(
                 "source_id": source.id,
                 "source_name": source.name,
                 "url": source.url,
+                "fallback_urls": list(source.fallback_urls),
                 "fetched_at": fetched_at,
                 "rule_count": accepted,
                 "sha256": sha256_file(data_path),
@@ -803,6 +833,7 @@ async def build_profile(profile: str) -> dict:
             })
             entry = {
                 "id": source.id, "name": source.name, "url": source.url,
+                "fallback_urls": list(source.fallback_urls),
                 "status": item["status"], "primary": source.primary,
                 "purpose": source.purpose, "default_scope": source.default_scope,
                 "accepted_rules_in_feed": int(item.get("accepted_rules", 0)),
