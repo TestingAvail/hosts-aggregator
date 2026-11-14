@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -11,6 +12,13 @@ import urllib.request
 from datetime import datetime
 
 OWNED_RELEASE_TAG_PREFIX = "hosts-aggregator-"
+LEGACY_RELEASE_TAG = re.compile(r"^hosts-\d+-\d+$")
+
+
+def is_owned_release(release: dict) -> bool:
+    """Recognize current tags and the previous numeric build-tag format."""
+    tag = str(release.get("tag_name", ""))
+    return tag.startswith(OWNED_RELEASE_TAG_PREFIX) or bool(LEGACY_RELEASE_TAG.fullmatch(tag))
 
 
 def parse_date(release: dict) -> str:
@@ -19,10 +27,7 @@ def parse_date(release: dict) -> str:
 
 def select_releases_to_delete(releases: list[dict], keep: int = 30) -> list[dict]:
     """Select stale releases created by this builder only."""
-    owned = [
-        release for release in releases
-        if str(release.get("tag_name", "")).startswith(OWNED_RELEASE_TAG_PREFIX)
-    ]
+    owned = [release for release in releases if is_owned_release(release)]
     ordered = sorted(owned, key=parse_date, reverse=True)
     return ordered[max(0, keep):]
 
