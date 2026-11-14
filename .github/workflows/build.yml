@@ -8,16 +8,28 @@ on:
       - "audit_dns.py"
       - "requirements.txt"
       - "tests/**"
-      - ".github/workflows/**"
-      - "README.md"
+      - "scripts/**"
       - "SOURCES.md"
-      - ".gitignore"
+      - "README.md"
+      - ".github/workflows/build.yml"
   schedule:
-    - cron: "17 3 * * *"
+    # HaGeZi publishes its daily reference build around 11:00 UTC.
+    # Run after that publication window; GitHub may still delay scheduled jobs.
+    - cron: "17 12 * * *"
   workflow_dispatch:
     inputs:
       run_dns_audit:
-        description: "Run the slower, non-destructive DNS audit after building"
+        description: "Run a non-destructive DNS diagnostic sample after building"
+        required: false
+        type: boolean
+        default: false
+      allow_source_shrink:
+        description: "Accept a source that shrank by over 50% (only after reviewing its upstream change)"
+        required: false
+        type: boolean
+        default: false
+      include_schakal:
+        description: "Include Schakal only if you have confirmed redistribution permission"
         required: false
         type: boolean
         default: false
@@ -26,20 +38,25 @@ permissions:
   contents: write
 
 concurrency:
-  group: hosts-aggregator-${{ github.ref }}
+  group: hosts-aggregator-main
   cancel-in-progress: false
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    name: Build FAT and SLIM
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-
+    env:
+      PYTHONUNBUFFERED: "1"
+      SOURCE_CACHE_DIR: ${{ github.workspace }}/.source-cache
+      SOURCE_CACHE_MAX_AGE_DAYS: "14"
+      ALLOW_SOURCE_SHRINK: ${{ inputs.allow_source_shrink || false }}
+      ENABLE_SCHAKAL_SOURCE: ${{ inputs.include_schakal || false }}
     steps:
-      - name: Check out repository
+      - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -52,30 +69,60 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .source-cache
-          key: hosts-source-cache-v3-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: source-cache-v4-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            hosts-source-cache-v3-${{ runner.os }}-
+            source-cache-v4-${{ runner.os }}-
 
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements.txt
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Compile Python
+        run: python -m compileall -q update.py audit_dns.py scripts tests
+
+      - name: Run offline tests
         run: |
-          python -m py_compile update.py audit_dns.py scripts/prune_releases.py
+          python update.py --self-test
           python -m unittest discover -s tests -v
-          git diff --check
 
-      - name: Build FAT and SLIM lists
+      - name: Build all profiles
         run: python update.py
 
-      - name: Optional DNS audit (non-destructive)
-        if: ${{ inputs.run_dns_audit == true }}
-        run: python audit_dns.py --input hosts.txt hosts-slim.txt
+      - name: Optional non-destructive DNS audit
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dns_audit }}
+        run: |
+          python audit_dns.py \
+            --files hosts.txt hosts-slim.txt \
+            --limit 10000 \
+            --concurrency 100 \
+            --output dns-audit.csv
 
-      - name: Upload build files
+      - name: Verify generated files and checksums
+        run: |
+          test -s hosts.txt
+          test -s abp.txt
+          test -s hosts-slim.txt
+          test -s abp-slim.txt
+          test -s build-report.json
+          test -s SHA256SUMS
+          test -s source-map.tsv.gz
+          sha256sum -c SHA256SUMS
+
+      - name: Commit generated router lists
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hosts.txt abp.txt hosts-slim.txt abp-slim.txt build-report.json SHA256SUMS
+          if git diff --cached --quiet; then
+            echo "Generated files have no changes."
+          else
+            git commit -m "chore: update generated blocklists [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: hosts-aggregator-${{ github.run_number }}
+          name: hosts-aggregator-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             hosts.txt
             abp.txt
@@ -83,34 +130,23 @@ jobs:
             abp-slim.txt
             build-report.json
             SHA256SUMS
+            source-map.tsv.gz
             dns-audit.csv
-            dns-audit-summary.json
           if-no-files-found: warn
           retention-days: 30
           compression-level: 6
 
-      - name: Commit generated files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add hosts.txt abp.txt hosts-slim.txt abp-slim.txt build-report.json SHA256SUMS
-          if git diff --cached --quiet; then
-            echo "Generated lists are unchanged."
-          else
-            git commit -m "chore: update generated blocklists"
-            git push origin HEAD:main
-          fi
-
-      - name: Publish rolling GitHub release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: hosts-${{ github.run_number }}-${{ github.run_attempt }}
-          name: "Blocklists build #${{ github.run_number }}"
-          body: |
-            Automated FAT and SLIM router blocklists.
-
-            See `build-report.json` for source status, unique-domain contributions,
-            overlap statistics, file sizes and SHA-256 hashes.
+          tag_name: blocklists-${{ github.run_number }}-${{ github.run_attempt }}
+          name: Blocklists build #${{ github.run_number }}
+          target_commitish: main
+          make_latest: true
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          fail_on_unmatched_files: true
           files: |
             hosts.txt
             abp.txt
@@ -118,13 +154,10 @@ jobs:
             abp-slim.txt
             build-report.json
             SHA256SUMS
-          fail_on_unmatched_files: true
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            source-map.tsv.gz
 
-      - name: Keep the 30 newest releases
+      - name: Keep newest 30 releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python scripts/prune_releases.py --keep 30
+          KEEP_RELEASES: "30"
+        run: python scripts/prune_releases.py
