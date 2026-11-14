@@ -1087,7 +1087,7 @@ def publish_generation(profiles: list[dict]) -> dict:
             },
             "policy": {
                 "schakal_source_enabled": ENABLE_SCHAKAL_SOURCE,
-                "schakal_redistribution_license_review": "Schakal is disabled by default because no explicit redistribution license was identified. Enable only after permission is confirmed.",
+                "schakal_redistribution_license_review": "Schakal is enabled by default as an exact-host FAT supplement; the reviewed public forum post did not identify an explicit open redistribution license, so maintain attribution and verify or obtain permission for public redistribution.",
                 "all_configured_sources_required": True,
                 "source_cache_max_age_days": CACHE_MAX_AGE_DAYS,
                 "allow_source_shrink_override_enabled": ALLOW_SOURCE_SHRINK,
