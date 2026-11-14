@@ -85,7 +85,6 @@ class ParserSemanticsTests(unittest.TestCase):
         self.assertEqual(sources["adaway"].license_id, "CC-BY-3.0")
         self.assertEqual(sources["nocoin"].license_id, "MIT")
         self.assertEqual(sources["r-a-y-adguard-dns"].license_id, "GPL-3.0")
-        self.assertIn("schakal-full-hosts", set())  # explicit removal marker
         self.assertNotIn("schakal-full-hosts", sources)
         self.assertNotIn("goodbyeads", sources)
         self.assertNotIn("stevenblack-unified", sources)
