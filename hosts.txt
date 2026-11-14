@@ -39911,6 +39911,7 @@
 0.0.0.0 4fiz-jo.shop
 0.0.0.0 4fiz-jos.shop
 0.0.0.0 4fizjo-oferta.shop
+0.0.0.0 4fizjo-okazje.shop
 0.0.0.0 4fizjo-outlet.shop
 0.0.0.0 4fizjo-pl.shop
 0.0.0.0 4fizjo-poland.shop
@@ -111451,6 +111452,7 @@
 0.0.0.0 allegrolokalnie.pl-ogloszenie9783245612.click
 0.0.0.0 allegrolokalnie.pl-ogloszezenei12891910.shop
 0.0.0.0 allegrolokalnie.pl-ogloszezenie01127894.shop
+0.0.0.0 allegrolokalnie.pl-oqloszenie28372800184802.pl
 0.0.0.0 allegrolokalnie.pl-prywatne.eu.cc
 0.0.0.0 allegrolokalnie.pl-smart24.pl
 0.0.0.0 allegrolokalnie.pl-ssid38019.click
@@ -171930,6 +171932,7 @@
 0.0.0.0 bluesparrowmedia.com
 0.0.0.0 bluespruceservices.info
 0.0.0.0 bluesq.com
+0.0.0.0 bluesstann.store
 0.0.0.0 bluestacks.go2cloud.org
 0.0.0.0 bluestacksdownloads.com
 0.0.0.0 bluestar-roofing.com
@@ -179235,6 +179238,7 @@
 0.0.0.0 bonavol.com
 0.0.0.0 bonazzihotel.live
 0.0.0.0 bonbonfreeze.com
+0.0.0.0 bonbonhomede.com
 0.0.0.0 bonbonijezero.xyz
 0.0.0.0 boncavit.com
 0.0.0.0 boncoin-annonces-2112.fr
@@ -183083,6 +183087,7 @@
 0.0.0.0 bravqon.shop
 0.0.0.0 bravtiko.shop
 0.0.0.0 bravtriq.com
+0.0.0.0 bravundelio.shop
 0.0.0.0 bravuratechservices.com
 0.0.0.0 bravvalorinta.com
 0.0.0.0 brawerfeebler.com
@@ -196917,6 +196922,7 @@
 0.0.0.0 calzedoniapromo.shop
 0.0.0.0 calzedoniasoldes.fr
 0.0.0.0 calzoleriadavidstresaoutlet.com
+0.0.0.0 calzorevian.shop
 0.0.0.0 calzuno.shop
 0.0.0.0 calzunora.shop
 0.0.0.0 cam-analytics-service-435433079.us-west-2.elb.amazonaws.com
@@ -207221,6 +207227,7 @@
 0.0.0.0 cdr.life
 0.0.0.0 cdragon.com.cn
 0.0.0.0 cdrbbebvmrmvgig.com
+0.0.0.0 cdrenee.shop
 0.0.0.0 cdreviews.us.intellitxt.com
 0.0.0.0 cdrfieldservices.com
 0.0.0.0 cdrinfo.us.intellitxt.com
@@ -210893,6 +210900,7 @@
 0.0.0.0 chansonoperator.xyz
 0.0.0.0 chansort.org
 0.0.0.0 chansteqindia.com
+0.0.0.0 chanszitti.store
 0.0.0.0 chant3rm1.com
 0.0.0.0 chant3rm2.com
 0.0.0.0 chant66.com
@@ -253855,6 +253863,7 @@
 0.0.0.0 datamonetizationservices.com
 0.0.0.0 datamonitorhealthcare.com.ssl.sc.omtrdc.net
 0.0.0.0 datanerd.us
+0.0.0.0 datanestod.info
 0.0.0.0 datanexium.pro
 0.0.0.0 datanexpress.com
 0.0.0.0 datangsmart.com
@@ -266287,6 +266296,7 @@
 0.0.0.0 dikshaappforpc.com
 0.0.0.0 dikvs.customers.edgetag.io
 0.0.0.0 dil4q0t0blrf8.cloudfront.net
+0.0.0.0 dilagreere.store
 0.0.0.0 dilandilan.com
 0.0.0.0 dilapidationeavesdropping.com
 0.0.0.0 dilapidationgroupprovidence.com
@@ -268064,6 +268074,7 @@
 0.0.0.0 disdainsneeze.com
 0.0.0.0 disdarrummers.shop
 0.0.0.0 disdisbuy.com
+0.0.0.0 disdisparg.store
 0.0.0.0 dise-global.com
 0.0.0.0 diseasebeacon.xyz
 0.0.0.0 diseasecbd.xyz
@@ -269384,6 +269395,7 @@
 0.0.0.0 dk-fk7348gc.sbs
 0.0.0.0 dk-fk8342gc.sbs
 0.0.0.0 dk-fk8453gc.sbs
+0.0.0.0 dk-fk9237gc.sbs
 0.0.0.0 dk-fk9412gc.sbs
 0.0.0.0 dk-fornysundhed.com
 0.0.0.0 dk-gartenservice.com
@@ -275383,6 +275395,7 @@
 0.0.0.0 drengbrix.click
 0.0.0.0 drenix50kp.com
 0.0.0.0 drenqavo.shop
+0.0.0.0 drenqavulio.shop
 0.0.0.0 drentheobserver.info
 0.0.0.0 drentok.shop
 0.0.0.0 drenvo.net
@@ -310624,6 +310637,7 @@
 0.0.0.0 farmingvilleny.com
 0.0.0.0 farmkingdom.xyz
 0.0.0.0 farmonarchy.com
+0.0.0.0 farmos.co.za
 0.0.0.0 farmos.online
 0.0.0.0 farmoutuvulas.qpon
 0.0.0.0 farmplan.com.102.112.2o7.net
@@ -347005,10 +347019,20 @@
 0.0.0.0 gls-group.lifestyle
 0.0.0.0 gls-group.party
 0.0.0.0 gls-group.pl-0v3.lol
+0.0.0.0 gls-group.pl-1t4.lol
 0.0.0.0 gls-group.pl-2m8.lol
+0.0.0.0 gls-group.pl-3q5.lol
+0.0.0.0 gls-group.pl-4a8.lol
 0.0.0.0 gls-group.pl-7d4.lol
+0.0.0.0 gls-group.pl-7x9.lol
+0.0.0.0 gls-group.pl-8n0.lol
+0.0.0.0 gls-group.pl-b6w.lol
+0.0.0.0 gls-group.pl-j8r.lol
+0.0.0.0 gls-group.pl-k2m.lol
 0.0.0.0 gls-group.pl-s9k.lol
+0.0.0.0 gls-group.pl-v5c.lol
 0.0.0.0 gls-group.pl-w5x.lol
+0.0.0.0 gls-group.pl-z91.lol
 0.0.0.0 gls-group.store
 0.0.0.0 gls-group.tech
 0.0.0.0 gls-groupat.cyou
@@ -382933,6 +382957,7 @@
 0.0.0.0 ihpnek.cdn-settings.appsflyersdk.com
 0.0.0.0 ihpnek.launches.appsflyersdk.com
 0.0.0.0 ihpngsxgjfdtn.website
+0.0.0.0 ihprzedmiotnr3434134.sbs
 0.0.0.0 ihq-za.k8s.intenthq.com
 0.0.0.0 ihqhl.customers.edgetag.io
 0.0.0.0 ihqho.customers.edgetag.io
@@ -392089,6 +392114,7 @@
 0.0.0.0 intercomdigital.com
 0.0.0.0 intercontinental.com.d1.sc.omtrdc.net
 0.0.0.0 intercontinentalservicescorp.com
+0.0.0.0 intercurat.store
 0.0.0.0 intercyborg.net
 0.0.0.0 interdatesa.com
 0.0.0.0 interdelivery.xyz
@@ -420579,6 +420605,7 @@
 0.0.0.0 kupanova.shop
 0.0.0.0 kupanova24.shop
 0.0.0.0 kupello.shop
+0.0.0.0 kupello.top
 0.0.0.0 kuperozu.net
 0.0.0.0 kupi-prava-dq.autos
 0.0.0.0 kupi-prava-kazan.com
@@ -428537,6 +428564,7 @@
 0.0.0.0 lepiaocloud.com
 0.0.0.0 lepidpomps.com
 0.0.0.0 lepirateportail.net
+0.0.0.0 lepizixenefonaponuvo.life
 0.0.0.0 leplandiscret.com
 0.0.0.0 leplvcbadrmgb.space
 0.0.0.0 lepodownload.mediatek.com
@@ -432956,6 +432984,7 @@
 0.0.0.0 lipstickerbankpoles.com
 0.0.0.0 lipsumgenerator.com
 0.0.0.0 liptonadventures.com
+0.0.0.0 lipukaxovutemovo.life
 0.0.0.0 liputan6.comxa.com
 0.0.0.0 lipvogue.com
 0.0.0.0 lipvori.eu.cc
@@ -451093,6 +451122,7 @@
 0.0.0.0 marcopolo.uk.net
 0.0.0.0 marcopolorabatt.com
 0.0.0.0 marcoricci.shop
+0.0.0.0 marcoripre.store
 0.0.0.0 marcosalvinistudio.live
 0.0.0.0 marcosbrito.com
 0.0.0.0 marcosburbano.com
@@ -463024,6 +463054,7 @@
 0.0.0.0 mes-office.online
 0.0.0.0 mes-scpi-de-gre-a-gre.webnode.fr
 0.0.0.0 mes.newsbreak.com
+0.0.0.0 mes4.q6c1r9b.pics
 0.0.0.0 mes8td41.pro
 0.0.0.0 mesa-ceosfloae.pro
 0.0.0.0 mesa-seen-dcjcj.live
@@ -519976,6 +520007,7 @@
 0.0.0.0 opoliumai.com
 0.0.0.0 opoliumtrade.com
 0.0.0.0 opolskuwewnetrz.pro
+0.0.0.0 opolszczyznaglos.info
 0.0.0.0 opona24.com
 0.0.0.0 oponeo.live
 0.0.0.0 oponeo24.com
@@ -534747,6 +534779,7 @@
 0.0.0.0 pewnytokenextrade.com
 0.0.0.0 pewnyzabieg.pl
 0.0.0.0 pewo.com
+0.0.0.0 pewqskith.lovable.app
 0.0.0.0 pewter-slip.shop
 0.0.0.0 pewter-stilettos.shop
 0.0.0.0 pewtertotalpromote.org
@@ -540620,6 +540653,7 @@
 0.0.0.0 pk-app.pk051.com
 0.0.0.0 pk-appv2.pk051.com
 0.0.0.0 pk-dosataw24inpost.rest
+0.0.0.0 pk-dostarcz69301xs.cyou
 0.0.0.0 pk-dostawa649307inpost.cyou
 0.0.0.0 pk-dostawca926inpost.cyou
 0.0.0.0 pk-entertainment.com
@@ -564626,6 +564660,7 @@
 0.0.0.0 qltwe.rdtk.io
 0.0.0.0 qltycetqigwtx1sul5ekzt7ksypib1790411154.uaid.vtwenty.com
 0.0.0.0 qltyhgluwdchv.site
+0.0.0.0 qltytu.globalwarming.pl
 0.0.0.0 qluccp.cdn-settings.appsflyersdk.com
 0.0.0.0 qluccp.launches.appsflyersdk.com
 0.0.0.0 qlucmyomqatcz.online
@@ -569211,6 +569246,7 @@
 0.0.0.0 ra0axf.cdn-settings.appsflyersdk.com
 0.0.0.0 ra0axf.inapps.appsflyersdk.com
 0.0.0.0 ra0mpyy93.com
+0.0.0.0 ra0ojf.globalwarming.pl
 0.0.0.0 ra1.xyz
 0.0.0.0 ra198login.site
 0.0.0.0 ra7gvy.cdn-settings.appsflyersdk.com
@@ -576783,6 +576819,7 @@
 0.0.0.0 renee-bots.shop
 0.0.0.0 renee-boutique.shop
 0.0.0.0 renee-but.shop
+0.0.0.0 renee-chic.shop
 0.0.0.0 renee-fashion.shop
 0.0.0.0 renee-femme.shop
 0.0.0.0 renee-outlet.shop
@@ -602609,6 +602646,7 @@
 0.0.0.0 scalawagsalon.com
 0.0.0.0 scalcnotri.store
 0.0.0.0 scaldinosync.click
+0.0.0.0 scaldracce.store
 0.0.0.0 scaldsheetdeterrent.com
 0.0.0.0 scale-test-1777332629454-221477a3.onmongodev.com
 0.0.0.0 scale-whatsapp.com
@@ -665168,6 +665206,7 @@
 0.0.0.0 tatrivexaai.net
 0.0.0.0 tatry-rynektra.org
 0.0.0.0 tatry-rynktra.com
+0.0.0.0 tatrystraznik.pro
 0.0.0.0 tats.cecash.com
 0.0.0.0 tatsmanaffects.com
 0.0.0.0 tatsumi-sys.jp
@@ -720551,6 +720590,7 @@
 0.0.0.0 villepouguesleseaux.fr
 0.0.0.0 villericev.rest
 0.0.0.0 villeroy-boch-top.shop
+0.0.0.0 villeroy-eutop.shop
 0.0.0.0 villeroy-outlets.shop
 0.0.0.0 villeroy-pl.shop
 0.0.0.0 villeroy-sale.shop
