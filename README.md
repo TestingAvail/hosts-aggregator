@@ -123,12 +123,6 @@ python3 -m venv .venv
 .venv/bin/python update.py
 ```
 
-Compare the latest published FAT/AdGuard coverage with Schakal's full global hosts list (diagnostic only; no files are modified):
-
-```bash
-.venv/bin/python scripts/compare_schakal.py
-```
-
 Optional DNS diagnostic sample (never edits lists):
 
 ```bash
