@@ -1,35 +1,37 @@
 {
   "schema_version": 2,
-  "builder_version": "4.2.2",
-  "generated_at_utc": "2026-11-14T10:46:53Z",
+  "builder_version": "4.3.0",
+  "generated_at_utc": "2026-11-14T12:46:51Z",
   "semantics": {
     "hosts": "Exact hostnames only; legacy expanded feeds enumerate known subdomains, unknown/dynamic subdomains cannot be represented.",
     "adguard": "ABP ||domain^ rules retain domain-tree scope; bare domain rules retain exact-host scope.",
     "dns_audit": "Non-destructive only; no domain is automatically removed based on liveness checks."
   },
   "policy": {
-    "schakal_source_enabled": true,
-    "schakal_redistribution_license_review": "Schakal is enabled by default as an exact-host FAT supplement; the reviewed public forum post did not identify an explicit open redistribution license, so maintain attribution and verify or obtain permission for public redistribution.",
+    "source_registry": "sources.json",
+    "public_redistribution_gate": "Only sources with approved or approved_with_attribution status can enter public builds.",
+    "manual_allow_exact_count": 14,
+    "manual_allow_pattern_count": 15,
     "all_configured_sources_required": true,
     "source_cache_max_age_days": 14,
     "allow_source_shrink_override_enabled": false,
-    "allowlisted_tree_count": 122,
-    "allowlisted_exact_count": 3,
-    "manual_force_block_tree_count": 43
+    "allowlisted_tree_count": 116,
+    "allowlisted_exact_count": 14,
+    "manual_force_block_tree_count": 42
   },
   "profiles": [
     {
       "name": "FAT",
-      "domain_count": 1301930,
+      "domain_count": 900774,
       "rule_counts": {
-        "exact": 657584,
-        "tree": 644346
+        "exact": 323900,
+        "tree": 576874
       },
-      "source_count": 8,
-      "configured_source_count": 8,
+      "source_count": 7,
+      "configured_source_count": 7,
       "failed_source_count": 0,
-      "overlap_domain_count": 467177,
-      "duration_seconds": 97.09,
+      "overlap_domain_count": 347843,
+      "duration_seconds": 69.93,
       "sources": [
         {
           "id": "hagezi-pro-plus-wildcard",
@@ -40,13 +42,22 @@
           "primary": true,
           "purpose": "ads-trackers-telemetry",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 250702,
-          "unique_domains": 250702,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 250854,
+          "unique_domains": 250854,
           "exclusive_domains": 0,
           "exact_domains": 0,
-          "tree_domains": 250702,
+          "tree_domains": 250854,
           "notes": "Primary aggressive DNS tier; wildcard semantics retained for AdGuard.",
-          "last_success_utc": "2026-11-14T10:45:57Z",
+          "last_success_utc": "2026-11-14T12:46:08Z",
           "cache_age_days": 0
         },
         {
@@ -58,13 +69,22 @@
           "primary": false,
           "purpose": "hosts-expansion",
           "default_scope": "exact",
-          "accepted_rules_in_feed": 577467,
-          "unique_domains": 577467,
-          "exclusive_domains": 249574,
-          "exact_domains": 577439,
-          "tree_domains": 28,
-          "notes": "Enumerated known hostnames for hosts consumers; cannot represent unknown dynamic subdomains.",
-          "last_success_utc": "2026-11-14T10:46:25Z",
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists-legacy/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists-legacy",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 577622,
+          "unique_domains": 577622,
+          "exclusive_domains": 319471,
+          "exact_domains": 577595,
+          "tree_domains": 27,
+          "notes": "Enumerated known hostnames for hosts consumers; cannot cover unknown dynamic subdomains.",
+          "last_success_utc": "2026-11-14T12:46:20Z",
           "cache_age_days": 0
         },
         {
@@ -76,13 +96,22 @@
           "primary": false,
           "purpose": "threat-intelligence",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 360148,
-          "unique_domains": 360148,
-          "exclusive_domains": 190580,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 360190,
+          "unique_domains": 360190,
+          "exclusive_domains": 192990,
           "exact_domains": 0,
-          "tree_domains": 360148,
+          "tree_domains": 360190,
           "notes": "Larger threat feed companion for the FAT/high-capacity profile; not a replacement for the main tier.",
-          "last_success_utc": "2026-11-14T10:46:12Z",
+          "last_success_utc": "2026-11-14T12:46:12Z",
           "cache_age_days": 0
         },
         {
@@ -94,87 +123,103 @@
           "primary": false,
           "purpose": "ads-trackers-malware",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 227874,
-          "unique_domains": 227874,
-          "exclusive_domains": 25188,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://oisd.nl/faq"
+          },
+          "attribution": "OISD — https://oisd.nl",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
+          },
+          "accepted_rules_in_feed": 227855,
+          "unique_domains": 227855,
+          "exclusive_domains": 38979,
           "exact_domains": 0,
-          "tree_domains": 227874,
+          "tree_domains": 227855,
           "notes": "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
-          "last_success_utc": "2026-11-14T10:46:18Z",
+          "last_success_utc": "2026-11-14T12:46:31Z",
           "cache_age_days": 0
         },
         {
-          "id": "goodbyeads",
-          "name": "GoodbyeAds",
-          "url": "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
+          "id": "adaway",
+          "name": "AdAway hosts",
+          "url": "https://adaway.org/hosts.txt",
           "fallback_urls": [],
           "status": "fresh",
           "primary": false,
           "purpose": "mobile-ads-trackers",
           "default_scope": "exact",
-          "accepted_rules_in_feed": 277599,
-          "unique_domains": 277599,
-          "exclusive_domains": 221864,
-          "exact_domains": 277580,
-          "tree_domains": 19,
-          "notes": "Hosts feed. See SOURCES.md for attribution and upstream source-license caveat.",
-          "last_success_utc": "2026-11-14T10:46:11Z",
+          "license": {
+            "id": "CC-BY-3.0",
+            "url": "https://creativecommons.org/licenses/by/3.0/"
+          },
+          "attribution": "Kicelo and Dominik Schuermann (AdAway default blocklist), plus subsequent contributors — https://github.com/AdAway/adaway.github.io",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream hosts file declares CC BY 3.0. Attribute the named authors, link to the source and license, and identify normalization and inclusion in an aggregate."
+          },
+          "accepted_rules_in_feed": 6537,
+          "unique_domains": 6537,
+          "exclusive_domains": 1083,
+          "exact_domains": 6528,
+          "tree_domains": 9,
+          "notes": "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
+          "last_success_utc": "2026-11-14T12:46:05Z",
           "cache_age_days": 0
         },
         {
-          "id": "stevenblack-unified",
-          "name": "StevenBlack Unified",
-          "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+          "id": "peter-lowe",
+          "name": "Peter Lowe's Ad and Tracking Server List",
+          "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext&useip=0.0.0.0",
           "fallback_urls": [],
           "status": "fresh",
           "primary": false,
-          "purpose": "adware-malware",
+          "purpose": "ads-trackers-malware",
           "default_scope": "exact",
-          "accepted_rules_in_feed": 77234,
-          "unique_domains": 77234,
-          "exclusive_domains": 1620,
-          "exact_domains": 77219,
-          "tree_domains": 15,
-          "notes": "Curated hosts aggregator; component feeds are not re-added separately.",
-          "last_success_utc": "2026-11-14T10:45:23Z",
+          "license": {
+            "id": "Publisher permission statement (non-SPDX)",
+            "url": "https://pgl.yoyo.org/as/index.php"
+          },
+          "attribution": "Peter Lowe — pgl@yoyo.org — https://pgl.yoyo.org/",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
+          },
+          "accepted_rules_in_feed": 3554,
+          "unique_domains": 3554,
+          "exclusive_domains": 227,
+          "exact_domains": 3543,
+          "tree_domains": 11,
+          "notes": "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
+          "last_success_utc": "2026-11-14T12:46:05Z",
           "cache_age_days": 0
         },
         {
-          "id": "phishing-army",
-          "name": "Phishing Army (canonical Adblock feed)",
-          "url": "https://phishing.army/download/phishing-army-adblock.txt",
+          "id": "nocoin",
+          "name": "NoCoin hosts",
+          "url": "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
           "fallback_urls": [],
           "status": "fresh",
           "primary": false,
-          "purpose": "phishing",
-          "default_scope": "tree",
-          "accepted_rules_in_feed": 145145,
-          "unique_domains": 145145,
-          "exclusive_domains": 59971,
-          "exact_domains": 0,
-          "tree_domains": 145145,
-          "notes": "Canonical reviewed phishing-host feed. A listed tenant hostname covers that hostname and its descendants, but never its unrelated parent/shared-hosting provider.",
-          "last_success_utc": "2026-11-14T10:46:14Z",
-          "cache_age_days": 0
-        },
-        {
-          "id": "schakal-full-hosts",
-          "name": "Schakal full hosts",
-          "url": "https://schakal.ru/hosts/hosts.txt",
-          "fallback_urls": [
-            "https://schakal.hopto.org/hosts.txt"
-          ],
-          "status": "fresh",
-          "primary": false,
-          "purpose": "community-hosts",
+          "purpose": "cryptomining",
           "default_scope": "exact",
-          "accepted_rules_in_feed": 269770,
-          "unique_domains": 269770,
-          "exclusive_domains": 85950,
-          "exact_domains": 269743,
-          "tree_domains": 27,
-          "notes": "Default FAT exact-host supplement; uses the community-documented hopto.org mirror if the primary host is unreachable.",
-          "last_success_utc": "2026-11-14T10:46:17Z",
+          "license": {
+            "id": "MIT",
+            "url": "https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE"
+          },
+          "attribution": "Hosh (2017) — https://github.com/hoshsadiq/adblock-nocoin-list",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream repository contains an MIT license. Preserve the copyright and permission notice, included as licenses/MIT-Hosh.txt."
+          },
+          "accepted_rules_in_feed": 312,
+          "unique_domains": 312,
+          "exclusive_domains": 171,
+          "exact_domains": 312,
+          "tree_domains": 0,
+          "notes": "MIT-licensed hosts feed; preserve Hosh's copyright/license notice in project attribution.",
+          "last_success_utc": "2026-11-14T12:45:35Z",
           "cache_age_days": 0
         }
       ],
@@ -185,16 +230,16 @@
     },
     {
       "name": "SLIM",
-      "domain_count": 360341,
+      "domain_count": 364605,
       "rule_counts": {
-        "exact": 71473,
-        "tree": 288868
+        "exact": 75620,
+        "tree": 288985
       },
-      "source_count": 4,
-      "configured_source_count": 4,
+      "source_count": 6,
+      "configured_source_count": 6,
       "failed_source_count": 0,
-      "overlap_domain_count": 107675,
-      "duration_seconds": 61.53,
+      "overlap_domain_count": 110289,
+      "duration_seconds": 54.36,
       "sources": [
         {
           "id": "hagezi-light-wildcard",
@@ -205,13 +250,22 @@
           "primary": true,
           "purpose": "ads-trackers",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 90173,
-          "unique_domains": 90173,
-          "exclusive_domains": 0,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 90239,
+          "unique_domains": 90239,
+          "exclusive_domains": 1,
           "exact_domains": 0,
-          "tree_domains": 90173,
+          "tree_domains": 90239,
           "notes": "Compatibility-oriented primary tier.",
-          "last_success_utc": "2026-11-14T10:45:28Z",
+          "last_success_utc": "2026-11-14T12:45:44Z",
           "cache_age_days": 0
         },
         {
@@ -223,13 +277,22 @@
           "primary": false,
           "purpose": "hosts-expansion",
           "default_scope": "exact",
-          "accepted_rules_in_feed": 162043,
-          "unique_domains": 162043,
-          "exclusive_domains": 71474,
-          "exact_domains": 162030,
-          "tree_domains": 13,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists-legacy/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists-legacy",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 162108,
+          "unique_domains": 162108,
+          "exclusive_domains": 69864,
+          "exact_domains": 162096,
+          "tree_domains": 12,
           "notes": "Enumerated known hostnames for hosts consumers.",
-          "last_success_utc": "2026-11-14T10:45:56Z",
+          "last_success_utc": "2026-11-14T12:46:00Z",
           "cache_age_days": 0
         },
         {
@@ -241,13 +304,22 @@
           "primary": false,
           "purpose": "threat-intelligence",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 185965,
-          "unique_domains": 185965,
-          "exclusive_domains": 154559,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+          },
+          "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+          },
+          "accepted_rules_in_feed": 186006,
+          "unique_domains": 186006,
+          "exclusive_domains": 154563,
           "exact_domains": 0,
-          "tree_domains": 185965,
-          "notes": "Smaller threat-intelligence companion for resource-constrained routers.",
-          "last_success_utc": "2026-11-14T10:45:51Z",
+          "tree_domains": 186006,
+          "notes": "Smaller threat-intelligence companion for resource-constrained profiles.",
+          "last_success_utc": "2026-11-14T12:45:58Z",
           "cache_age_days": 0
         },
         {
@@ -259,13 +331,76 @@
           "primary": false,
           "purpose": "ads",
           "default_scope": "tree",
-          "accepted_rules_in_feed": 62565,
-          "unique_domains": 62565,
-          "exclusive_domains": 26604,
+          "license": {
+            "id": "GPL-3.0",
+            "url": "https://oisd.nl/faq"
+          },
+          "attribution": "OISD — https://oisd.nl",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
+          },
+          "accepted_rules_in_feed": 62607,
+          "unique_domains": 62607,
+          "exclusive_domains": 25766,
           "exact_domains": 0,
-          "tree_domains": 62565,
+          "tree_domains": 62607,
           "notes": "Small wildcard-domain list; Big and Small are alternatives, not layers.",
-          "last_success_utc": "2026-11-14T10:45:56Z",
+          "last_success_utc": "2026-11-14T12:46:22Z",
+          "cache_age_days": 0
+        },
+        {
+          "id": "adaway",
+          "name": "AdAway hosts",
+          "url": "https://adaway.org/hosts.txt",
+          "fallback_urls": [],
+          "status": "fresh",
+          "primary": false,
+          "purpose": "mobile-ads-trackers",
+          "default_scope": "exact",
+          "license": {
+            "id": "CC-BY-3.0",
+            "url": "https://creativecommons.org/licenses/by/3.0/"
+          },
+          "attribution": "Kicelo and Dominik Schuermann (AdAway default blocklist), plus subsequent contributors — https://github.com/AdAway/adaway.github.io",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The upstream hosts file declares CC BY 3.0. Attribute the named authors, link to the source and license, and identify normalization and inclusion in an aggregate."
+          },
+          "accepted_rules_in_feed": 6537,
+          "unique_domains": 6537,
+          "exclusive_domains": 3019,
+          "exact_domains": 6528,
+          "tree_domains": 9,
+          "notes": "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
+          "last_success_utc": "2026-11-14T12:46:06Z",
+          "cache_age_days": 0
+        },
+        {
+          "id": "peter-lowe",
+          "name": "Peter Lowe's Ad and Tracking Server List",
+          "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext&useip=0.0.0.0",
+          "fallback_urls": [],
+          "status": "fresh",
+          "primary": false,
+          "purpose": "ads-trackers-malware",
+          "default_scope": "exact",
+          "license": {
+            "id": "Publisher permission statement (non-SPDX)",
+            "url": "https://pgl.yoyo.org/as/index.php"
+          },
+          "attribution": "Peter Lowe — pgl@yoyo.org — https://pgl.yoyo.org/",
+          "redistribution": {
+            "status": "approved_with_attribution",
+            "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
+          },
+          "accepted_rules_in_feed": 3554,
+          "unique_domains": 3554,
+          "exclusive_domains": 1082,
+          "exact_domains": 3543,
+          "tree_domains": 11,
+          "notes": "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
+          "last_success_utc": "2026-11-14T12:46:05Z",
           "cache_age_days": 0
         }
       ],
@@ -277,33 +412,33 @@
   ],
   "outputs": {
     "hosts.txt": {
-      "entries": 1301930,
-      "bytes": 41919148,
-      "sha256": "038ce19fdc030a37ed5240ba70eef10e64eb88c38a8cda33cadc10e7ca2f35a3",
-      "format": "hosts; exact hostnames"
+      "entries": 900773,
+      "bytes": 28594762,
+      "sha256": "95c523fb7a2f3a8d09ac309f648c0c581c9be92b479fcb2fc22d9d190901b7a9",
+      "format": "hosts; exact hostnames (compatibility exceptions omitted)"
     },
     "abp.txt": {
-      "rules": 828243,
-      "bytes": 18772563,
-      "sha256": "b5596adce9ff0e26a5fb51191cb58150de4e4e0a7eb4c0989f7c489e082616e8",
+      "rules": 567374,
+      "bytes": 12737939,
+      "sha256": "8f2faf619cce4512779bed360fe2445a0b493ab3323c6ac227246b537088061c",
       "format": "AdGuard DNS exact + domain-tree rules"
     },
     "hosts-slim.txt": {
-      "entries": 360341,
-      "bytes": 10701087,
-      "sha256": "179e31693cdd9b07fbd32b3d1455c28829101b9064259679babcdeb29a144b84",
-      "format": "hosts; exact hostnames"
+      "entries": 364604,
+      "bytes": 10827418,
+      "sha256": "e21aa898189791133039caf936c2d7d3df20f9d9b8377710c1d420193abaa6bd",
+      "format": "hosts; exact hostnames (compatibility exceptions omitted)"
     },
     "abp-slim.txt": {
-      "rules": 285994,
-      "bytes": 6398289,
-      "sha256": "3d0a8f41d86ed46eb533f60820bd580db28330e830404e4abccb5885e84f18f8",
+      "rules": 288739,
+      "bytes": 6458104,
+      "sha256": "15db376d30fb7e7662798ffc60bb5c7feb3e2d7defd1f4247649867a83e71674",
       "format": "AdGuard DNS exact + domain-tree rules"
     },
     "source-map.tsv.gz": {
-      "rows": 2686685,
-      "bytes": 21505070,
-      "sha256": "77a867499a4c8e27fb7fe66c56672425f89105818f505866a6bd08a98a257d64",
+      "rows": 1937975,
+      "bytes": 15713881,
+      "sha256": "bd36835d607be7b40e3de7c832d4e77f86c86ec2d4e1b8a96d1fdd5edb99514b",
       "format": "gzip TSV: profile, source_id, domain, scope"
     }
   }
