@@ -102,7 +102,7 @@ HaGeZi's standard tiers already include its Native Tracker categories at the tie
 
 - runs on pushes to builder/config/docs paths;
 - runs daily at **12:17 UTC**, after HaGeZi's published daily update window (scheduled jobs can still be delayed by GitHub);
-- includes the exact-host Schakal supplement in FAT by default; a manual workflow run can disable it;
+- consumes only feeds listed in `sources.json` as approved for public redistribution; Schakal's full feed and user-contributed 4PDA lists remain excluded pending documented permission (narrow compatibility exceptions are maintained separately in `update.py`);
 - supports `workflow_dispatch`, including an explicit confirmation switch for a reviewed source shrink;
 - runs tests before source downloads/build;
 - caches last successful source snapshots;
