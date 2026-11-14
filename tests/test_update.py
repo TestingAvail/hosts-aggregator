@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import gzip
 import hashlib
 import tempfile
 import unittest
+from unittest.mock import AsyncMock, patch
 from io import StringIO
 from pathlib import Path
 
@@ -16,6 +18,25 @@ class ParserSemanticsTests(unittest.TestCase):
         self.assertEqual(source.url, "https://schakal.ru/hosts/hosts.txt")
         self.assertEqual(source.fallback_urls, ("https://schakal.hopto.org/hosts.txt",))
         self.assertEqual(source.default_scope, update.SCOPE_EXACT)
+
+    def test_schakal_download_retries_the_documented_mirror(self):
+        source = update.SCHAKAL_SOURCE
+
+        async def run():
+            semaphore = asyncio.Semaphore(1)
+            fallback_result = (Path("unused-test-source.txt"), 7)
+            with patch.object(
+                update,
+                "_download_source_url",
+                new=AsyncMock(side_effect=[RuntimeError("primary timeout"), fallback_result]),
+            ) as downloader:
+                result = await update.download_source(None, source, semaphore, set())
+            return result, downloader.await_args_list
+
+        result, calls = asyncio.run(run())
+        self.assertEqual(result, (Path("unused-test-source.txt"), 7))
+        self.assertEqual(calls[0].args[4], "https://schakal.ru/hosts/hosts.txt")
+        self.assertEqual(calls[1].args[4], "https://schakal.hopto.org/hosts.txt")
 
     def test_plain_domain_scope_is_source_declared(self):
         self.assertEqual(
