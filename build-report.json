@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
   "builder_version": "3.0.0",
-  "generated_at_utc": "2026-11-13T18:48:50Z",
+  "generated_at_utc": "2026-11-14T10:37:14Z",
   "description": "Aggregated router DNS/hosts blocklists. DNS liveness auditing is separate and never deletes entries automatically.",
   "profiles": [
     {
       "name": "FAT",
-      "domain_count": 743971,
+      "domain_count": 750374,
       "source_count": 6,
       "configured_source_count": 6,
       "failed_source_count": 0,
-      "overlap_domain_count": 264750,
-      "duration_seconds": 19.08,
+      "overlap_domain_count": 264420,
+      "duration_seconds": 21.83,
       "sources": [
         {
           "id": "hagezi-pro-plus",
@@ -19,10 +19,10 @@
           "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
           "status": "fresh",
           "primary": true,
-          "accepted_domains_in_source": 242858,
-          "unique_domains": 242858,
-          "exclusive_domains": 97048,
-          "last_success_utc": "2026-11-13T18:48:43Z",
+          "accepted_domains_in_source": 250702,
+          "unique_domains": 250702,
+          "exclusive_domains": 104312,
+          "last_success_utc": "2026-11-14T10:37:00Z",
           "cache_age_days": 0
         },
         {
@@ -31,10 +31,10 @@
           "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.mini-onlydomains.txt",
           "status": "fresh",
           "primary": false,
-          "accepted_domains_in_source": 185960,
-          "unique_domains": 185960,
-          "exclusive_domains": 19067,
-          "last_success_utc": "2026-11-13T18:48:39Z",
+          "accepted_domains_in_source": 185965,
+          "unique_domains": 185965,
+          "exclusive_domains": 18837,
+          "last_success_utc": "2026-11-14T10:37:04Z",
           "cache_age_days": 0
         },
         {
@@ -43,10 +43,10 @@
           "url": "https://big.oisd.nl/",
           "status": "fresh",
           "primary": false,
-          "accepted_domains_in_source": 227945,
-          "unique_domains": 227945,
-          "exclusive_domains": 27197,
-          "last_success_utc": "2026-11-13T18:48:45Z",
+          "accepted_domains_in_source": 227874,
+          "unique_domains": 227874,
+          "exclusive_domains": 27075,
+          "last_success_utc": "2026-11-14T10:37:08Z",
           "cache_age_days": 0
         },
         {
@@ -57,8 +57,8 @@
           "primary": false,
           "accepted_domains_in_source": 277598,
           "unique_domains": 277598,
-          "exclusive_domains": 235346,
-          "last_success_utc": "2026-11-13T18:48:44Z",
+          "exclusive_domains": 235272,
+          "last_success_utc": "2026-11-14T10:37:04Z",
           "cache_age_days": 0
         },
         {
@@ -67,10 +67,10 @@
           "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
           "status": "fresh",
           "primary": false,
-          "accepted_domains_in_source": 78140,
-          "unique_domains": 78140,
-          "exclusive_domains": 39404,
-          "last_success_utc": "2026-11-13T18:48:35Z",
+          "accepted_domains_in_source": 77234,
+          "unique_domains": 77234,
+          "exclusive_domains": 38991,
+          "last_success_utc": "2026-11-14T10:36:54Z",
           "cache_age_days": 0
         },
         {
@@ -79,10 +79,10 @@
           "url": "https://phishing.army/download/phishing_army_blocklist_extended.txt",
           "status": "fresh",
           "primary": false,
-          "accepted_domains_in_source": 145692,
-          "unique_domains": 145692,
-          "exclusive_domains": 61152,
-          "last_success_utc": "2026-11-13T18:48:43Z",
+          "accepted_domains_in_source": 145145,
+          "unique_domains": 145145,
+          "exclusive_domains": 61460,
+          "last_success_utc": "2026-11-14T10:37:07Z",
           "cache_age_days": 0
         }
       ],
@@ -93,12 +93,12 @@
     },
     {
       "name": "SLIM",
-      "domain_count": 133703,
+      "domain_count": 134299,
       "source_count": 2,
       "configured_source_count": 2,
       "failed_source_count": 0,
-      "overlap_domain_count": 18393,
-      "duration_seconds": 12.9,
+      "overlap_domain_count": 18470,
+      "duration_seconds": 16.11,
       "sources": [
         {
           "id": "hagezi-light",
@@ -106,10 +106,10 @@
           "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/light-onlydomains.txt",
           "status": "fresh",
           "primary": true,
-          "accepted_domains_in_source": 89655,
-          "unique_domains": 89655,
-          "exclusive_domains": 71262,
-          "last_success_utc": "2026-11-13T18:48:33Z",
+          "accepted_domains_in_source": 90173,
+          "unique_domains": 90173,
+          "exclusive_domains": 71703,
+          "last_success_utc": "2026-11-14T10:36:56Z",
           "cache_age_days": 0
         },
         {
@@ -118,10 +118,10 @@
           "url": "https://small.oisd.nl/",
           "status": "fresh",
           "primary": false,
-          "accepted_domains_in_source": 62410,
-          "unique_domains": 62410,
-          "exclusive_domains": 44017,
-          "last_success_utc": "2026-11-13T18:48:40Z",
+          "accepted_domains_in_source": 62565,
+          "unique_domains": 62565,
+          "exclusive_domains": 44095,
+          "last_success_utc": "2026-11-14T10:37:03Z",
           "cache_age_days": 0
         }
       ],
@@ -133,27 +133,27 @@
   ],
   "outputs": {
     "hosts.txt": {
-      "domain_entries": 743971,
-      "bytes": 22314159,
-      "sha256": "8a63b1656c6a89f8a3fa69abe81d46fed5818ea3f4e5ddc1f2ca80753e723fe9",
+      "domain_entries": 750374,
+      "bytes": 22509977,
+      "sha256": "a7eac7ca67e6751ddb3935348f8f9c87f0402bc00b70b64fdac257dae2dacb92",
       "format": "hosts"
     },
     "abp.txt": {
-      "domain_rules": 578622,
-      "bytes": 13441608,
-      "sha256": "824343584a22228d9a9a23f33791570c0709659bcae0f71e07d0fc55c33da4d0",
+      "domain_rules": 584940,
+      "bytes": 13598348,
+      "sha256": "b0be05b9b145f89b80ae03e0b0a2a978270af5cdc8cea27d117d9b1360b6021c",
       "format": "AdGuard Home domain rules"
     },
     "hosts-slim.txt": {
-      "domain_entries": 133703,
-      "bytes": 3884942,
-      "sha256": "c81ae80286e9f94faf12cc495b671c61ed5634eefa684dca2eb4603405df1748",
+      "domain_entries": 134299,
+      "bytes": 3902575,
+      "sha256": "2373166367c181f4feb2603de25c6c07fabc4e641aad33ee5f07f523b307ebd0",
       "format": "hosts"
     },
     "abp-slim.txt": {
-      "domain_rules": 131376,
-      "bytes": 3156591,
-      "sha256": "35e453619cb6b8c6e31ab018ac0ad1df315aa2a3515138f0c865c7fc48c1bdbf",
+      "domain_rules": 131966,
+      "bytes": 3171111,
+      "sha256": "9e7c846102c94f314b42d49920b74f335b0b54042e37b30c6be34860a17a4251",
       "format": "AdGuard Home domain rules"
     }
   }
