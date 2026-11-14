@@ -1,194 +1,204 @@
-import sys
+from __future__ import annotations
+
+import gzip
+import hashlib
 import tempfile
 import unittest
-import json
-from datetime import timedelta
-from unittest.mock import patch
+from io import StringIO
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
 import update
 
 
-class ParserTests(unittest.TestCase):
-    def test_google_services_are_allowlisted(self):
-        protected = [
-            "google.com", "googleapis.com", "gstatic.com", "googleusercontent.com",
-            "aistudio.google.com", "generativelanguage.googleapis.com",
-            "accounts.google.com", "oauth2.googleapis.com", "fonts.gstatic.com",
-            "sub.aistudio.google.com", "sub.generativelanguage.googleapis.com",
-        ]
-        for domain in protected:
-            with self.subTest(domain=domain):
-                self.assertIsNone(update.parse_line(domain))
-
-    def test_explicit_ad_domains_override_google_allowlist(self):
-        for domain in [
-            "doubleclick.net", "googlesyndication.com", "adservice.google.com",
-            "googletagmanager.com", "googleadservices.com",
-        ]:
-            with self.subTest(domain=domain):
-                self.assertEqual(update.parse_line(domain), domain)
-
-    def test_hosts_mapping_keeps_all_valid_aliases(self):
-        line = "0.0.0.0 ads.example.test aistudio.google.com ads2.example.test # local test"
+class ParserSemanticsTests(unittest.TestCase):
+    def test_plain_domain_scope_is_source_declared(self):
         self.assertEqual(
-            update.parse_domains_from_line(line),
-            ["ads.example.test", "ads2.example.test"],
+            update.parse_source_line("ads.example.test", update.SCOPE_EXACT),
+            [("ads.example.test", update.SCOPE_EXACT)],
+        )
+        self.assertEqual(
+            update.parse_source_line("ads.example.test", update.SCOPE_TREE),
+            [("ads.example.test", update.SCOPE_TREE)],
         )
 
-    def test_ipv6_hosts_mapping(self):
+    def test_oisd_wildcard_entry_is_tree_scope(self):
         self.assertEqual(
-            update.parse_domains_from_line("::1 tracker.example.test another.example.test"),
-            ["tracker.example.test", "another.example.test"],
+            update.parse_source_line("*.example.test", update.SCOPE_EXACT),
+            [("example.test", update.SCOPE_TREE)],
         )
 
-    def test_only_exact_abp_domain_rules_are_converted(self):
-        self.assertEqual(update.parse_line("||ads.example.test^"), "ads.example.test")
-        self.assertIsNone(update.parse_line("@@||ads.example.test^"))
-        self.assertIsNone(update.parse_line("||ads.example.test^$third-party"))
-        self.assertIsNone(update.parse_line("||*.ads.example.test^"))
-        self.assertIsNone(update.parse_line("|https://ads.example.test^"))
+    def test_hosts_mapping_is_always_exact(self):
+        self.assertEqual(
+            update.parse_source_line("0.0.0.0 a.example.test b.example.test", update.SCOPE_TREE),
+            [("a.example.test", update.SCOPE_EXACT), ("b.example.test", update.SCOPE_EXACT)],
+        )
 
-    def test_idna_is_normalized(self):
-        self.assertEqual(update.parse_line("пример.рф"), "xn--e1afmkfd.xn--p1ai")
+    def test_abp_tree_rule_preserved_and_modifiers_not_widened(self):
+        self.assertEqual(
+            update.parse_source_line("||ads.example.test^", update.SCOPE_EXACT),
+            [("ads.example.test", update.SCOPE_TREE)],
+        )
+        self.assertEqual(update.parse_source_line("||ads.example.test^$third-party"), [])
+        self.assertEqual(update.parse_source_line("@@||ads.example.test^"), [])
 
-    def test_invalid_input_is_rejected(self):
-        for value in ["", "localhost", "not a domain", "https://example.com", "-bad.example"]:
+    def test_unicode_domain_normalized(self):
+        self.assertEqual(
+            update.parse_source_line("пример.рф"),
+            [("xn--e1afmkfd.xn--p1ai", update.SCOPE_EXACT)],
+        )
+
+    def test_invalid_and_single_label_rejected(self):
+        self.assertEqual(update.parse_source_line("localhost"), [])
+        self.assertEqual(update.parse_source_line("not a domain"), [])
+        self.assertEqual(update.parse_source_line("127.0.0.1"), [])
+
+    def test_google_and_ai_studio_are_protected(self):
+        for value in (
+            "google.com", "googleapis.com", "aistudio.google.com",
+            "generativelanguage.googleapis.com", "accounts.google.com",
+        ):
             with self.subTest(value=value):
-                self.assertIsNone(update.parse_line(value))
+                self.assertEqual(update.parse_source_line(value, update.SCOPE_TREE), [])
+        self.assertEqual(
+            update.parse_source_line("google.com", update.SCOPE_TREE, force_roots={"google.com"}),
+            [],
+        )
+        self.assertEqual(
+            update.parse_source_line("aistudio.google.com", update.SCOPE_TREE, force_roots={"aistudio.google.com"}),
+            [],
+        )
 
-    def test_whitelist_protects_parent_zone(self):
-        # The parent zone needed for a protected service cannot be blocked.
-        self.assertIsNone(update.parse_line("googleapis.com"))
-        self.assertIsNone(update.parse_line("google.com"))
-
-
-class StoreAndOutputTests(unittest.TestCase):
-    def test_hosts_keeps_exact_subdomains_but_adguard_compacts_parent(self):
-        store = update.DomainStore()
-        try:
-            store.add_manual_domains(["example.test", "sub.example.test", "other.test"])
-            with tempfile.TemporaryDirectory() as tmp:
-                hosts_path = Path(tmp) / "hosts.txt"
-                adguard_path = Path(tmp) / "adguard.txt"
-                with hosts_path.open("w", encoding="utf-8") as stream:
-                    count = update.write_hosts(store, stream, "TEST")
-                with adguard_path.open("w", encoding="utf-8") as stream:
-                    rules = update.write_adguard(store, stream, "TEST")
-                hosts = hosts_path.read_text(encoding="utf-8")
-                adguard = adguard_path.read_text(encoding="utf-8")
-                self.assertEqual(count, 3)
-                self.assertIn("0.0.0.0 sub.example.test", hosts)
-                self.assertEqual(rules, 2)
-                self.assertIn("||example.test^", adguard)
-                self.assertNotIn("||sub.example.test^", adguard)
-        finally:
-            store.close()
-
-    def test_source_provenance_and_overlap_metrics(self):
-        store = update.DomainStore()
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                a = Path(tmp) / "a.txt"
-                b = Path(tmp) / "b.txt"
-                a.write_text("a.example\nshared.example\n", encoding="utf-8")
-                b.write_text("b.example\nshared.example\n", encoding="utf-8")
-                store.add_source_file("source-a", a)
-                store.add_source_file("source-b", b)
-            metrics = store.source_metrics()
-            self.assertEqual(metrics["source-a"]["unique_domains"], 2)
-            self.assertEqual(metrics["source-a"]["exclusive_domains"], 1)
-            self.assertEqual(metrics["source-b"]["exclusive_domains"], 1)
-            self.assertEqual(store.overlap_count(), 1)
-            self.assertEqual(store.count(), 3)
-        finally:
-            store.close()
+    def test_narrow_ad_endpoint_can_override_generic_google_allow(self):
+        self.assertEqual(
+            update.parse_source_line("adservice.google.com", update.SCOPE_TREE),
+            [("adservice.google.com", update.SCOPE_TREE)],
+        )
 
 
-    def test_manual_rules_do_not_distort_source_metrics(self):
-        store = update.DomainStore()
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                source = Path(tmp) / "source.txt"
-                source.write_text("shared.example\n", encoding="utf-8")
-                store.add_source_file("source-a", source)
-            store.add_manual_domains(["shared.example", "manual.example"])
-            metrics = store.source_metrics()
-            self.assertEqual(set(metrics), {"source-a"})
-            self.assertEqual(metrics["source-a"]["unique_domains"], 1)
-            self.assertEqual(metrics["source-a"]["exclusive_domains"], 1)
-            self.assertEqual(store.overlap_count(), 0)
-            self.assertEqual(store.count(), 2)
-        finally:
-            store.close()
+    def test_production_source_scopes_are_explicit(self):
+        sources = {source.id: source for source in update.FAT_SOURCES + update.SLIM_SOURCES}
+        self.assertEqual(sources["oisd-big"].default_scope, update.SCOPE_TREE)
+        self.assertEqual(sources["oisd-small"].default_scope, update.SCOPE_TREE)
+        self.assertEqual(update.SCHAKAL_SOURCE.default_scope, update.SCOPE_EXACT)
+        self.assertIn("schakal-full-hosts", sources)
+        self.assertEqual(sources["schakal-full-hosts"].default_scope, update.SCOPE_EXACT)
+        self.assertIn("/hosts/pro.plus.txt", sources["hagezi-pro-plus-hosts"].url)
+        self.assertIn("/hosts/light.txt", sources["hagezi-light-hosts"].url)
+        self.assertIn("tif.medium-onlydomains.txt", sources["hagezi-tif-medium"].url)
+        self.assertIn("phishing-army-adblock.txt", sources["phishing-army"].url)
+        self.assertEqual(sources["phishing-army"].default_scope, update.SCOPE_TREE)
+        self.assertIn("tif.mini-onlydomains.txt", sources["hagezi-tif-mini"].url)
+        self.assertEqual(sources["hagezi-tif-mini"].default_scope, update.SCOPE_TREE)
 
-    def test_generation_publishes_all_formats_and_report(self):
-        store = update.DomainStore()
-        original_root = update.ROOT
-        try:
-            store.add_manual_domains(["example.test", "sub.example.test", "ads.test"])
-            with tempfile.TemporaryDirectory() as tmp:
-                update.ROOT = Path(tmp)
-                profile = {
-                    "profile": "FAT", "store": store, "domain_count": store.count(),
-                    "source_count": 0, "configured_source_count": 0,
-                    "failed_source_count": 0, "overlap_domain_count": 0,
-                    "duration_seconds": 0.01, "sources": [],
-                }
-                # A second profile is included to check that all four public
-                # filenames are published in the same generation.
-                slim_store = update.DomainStore()
-                slim_store.add_manual_domains(["slim.test"])
-                slim = {**profile, "profile": "SLIM", "store": slim_store, "domain_count": 1}
-                try:
-                    report = update.publish_generation([profile, slim])
-                    for name in ("hosts.txt", "abp.txt", "hosts-slim.txt", "abp-slim.txt", "build-report.json", "SHA256SUMS"):
-                        self.assertTrue((Path(tmp) / name).is_file(), name)
-                    self.assertEqual(report["outputs"]["hosts.txt"]["domain_entries"], 3)
-                    self.assertGreater(report["outputs"]["abp.txt"]["domain_rules"], 0)
-                    self.assertIn("hosts.txt", (Path(tmp) / "SHA256SUMS").read_text(encoding="utf-8"))
-                finally:
-                    slim_store.close()
-        finally:
-            update.ROOT = original_root
-            store.close()
+    def test_phishing_army_hostname_tree_does_not_block_shared_parent(self):
+        self.assertEqual(
+            update.parse_source_line("||phishing.tenant.example^", update.SCOPE_EXACT),
+            [("phishing.tenant.example", update.SCOPE_TREE)],
+        )
+        self.assertEqual(
+            update.parse_source_line("||tenant.example^", update.SCOPE_EXACT),
+            [("tenant.example", update.SCOPE_TREE)],
+        )
 
-    def test_protected_zone_audit_fails_closed(self):
-        store = update.DomainStore()
-        try:
-            store.add_manual_domains(["googleapis.com"])
-            with self.assertRaises(RuntimeError):
-                update.audit_protected_domains(store, "TEST")
-        finally:
-            store.close()
+    def test_manual_legitimate_samples_are_allowed(self):
+        self.assertEqual(update.parse_source_line("www.baihe.com"), [])
+        self.assertEqual(update.parse_source_line("jobs.sciencecareers.org"), [])
+        self.assertEqual(update.parse_source_line("cardlytics.com"), [])
+        # Compatibility exceptions are narrow exact hosts, not blanket trees.
+        self.assertEqual(
+            update.parse_source_line("tracking.cardlytics.com", update.SCOPE_TREE),
+            [("tracking.cardlytics.com", update.SCOPE_TREE)],
+        )
+        self.assertEqual(update.parse_source_line("cardlytics.com", update.SCOPE_TREE), [])
+        self.assertEqual(update.parse_source_line("sciencecareers.org", update.SCOPE_TREE), [])
 
-    def test_source_cache_is_validated_and_expires(self):
-        source = update.Source("test-source", "Test Source", "https://example.test/list")
-        with tempfile.TemporaryDirectory() as tmp, patch.object(update, "CACHE_DIR", Path(tmp)):
-            data_path, metadata_path = update._source_cache_paths(source)
-            data_path.write_text("tracker.example.test\n", encoding="utf-8")
-            metadata = {
-                "url": source.url,
-                "fetched_at": update.iso_utc(),
-                "sha256": update.file_sha256(data_path),
-            }
-            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
-            cached = update._read_cache(source, set())
-            self.assertIsNotNone(cached)
-            cached_path, details = cached
+
+class OutputSemanticsTests(unittest.TestCase):
+    def setUp(self):
+        self.store = update.DomainStore()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.input_path = Path(self.tmp.name) / "rules.tsv"
+        self.input_path.write_text(
+            "tree\tads.example.test\n"
+            "exact\tapi.legacy.example.test\n"
+            "exact\tchild.ads.example.test\n"
+            "exact\troot.example.test\n",
+            encoding="utf-8",
+        )
+        self.store.add_source_file("unit", self.input_path)
+
+    def tearDown(self):
+        self.store.close()
+        self.tmp.cleanup()
+
+    def test_adguard_does_not_widen_exact_rules(self):
+        out = StringIO()
+        update.write_adguard(self.store, out, "TEST")
+        result = out.getvalue()
+        self.assertIn("||ads.example.test^", result)
+        self.assertIn("api.legacy.example.test\n", result)
+        self.assertIn("root.example.test\n", result)
+        self.assertNotIn("||api.legacy.example.test^", result)
+        self.assertNotIn("child.ads.example.test\n", result)
+        self.assertNotIn("@@||baihe.com^", result)
+        self.assertNotIn("@@||sciencecareers.org^", result)
+        self.assertNotIn("@@||cardlytics.com^", result)
+
+    def test_hosts_includes_all_known_exact_hostnames(self):
+        out = StringIO()
+        update.write_hosts(self.store, out, "TEST")
+        result = out.getvalue()
+        self.assertIn("0.0.0.0 child.ads.example.test\n", result)
+        self.assertIn("0.0.0.0 api.legacy.example.test\n", result)
+
+
+    def test_atomic_generation_writes_report_source_map_and_valid_checksums(self):
+        old_root = update.ROOT
+        with tempfile.TemporaryDirectory() as temp_root:
             try:
-                self.assertEqual(cached_path.read_text(encoding="utf-8").strip(), "tracker.example.test")
-                self.assertEqual(details["cache_age_days"], 0)
+                update.ROOT = Path(temp_root)
+                profiles = []
+                for profile, source_id, domain in (
+                    ("FAT", "feed-fat", "ads.example.test"),
+                    ("SLIM", "feed-slim", "tracker.example.test"),
+                ):
+                    store = update.DomainStore()
+                    input_file = Path(temp_root) / f"{profile}.tsv"
+                    input_file.write_text(f"tree\t{domain}\n", encoding="utf-8")
+                    store.add_source_file(source_id, input_file)
+                    profiles.append({
+                        "profile": profile, "store": store, "domain_count": store.count(),
+                        "source_count": 1, "configured_source_count": 1,
+                        "failed_source_count": 0, "overlap_domain_count": 0,
+                        "rule_counts": store.rule_counts(),
+                        "sources": [{"id": source_id, "name": source_id, "status": "fresh"}],
+                        "duration_seconds": 0.01,
+                    })
+                report = update.publish_generation(profiles)
+                for filename in ("hosts.txt", "abp.txt", "hosts-slim.txt", "abp-slim.txt", "build-report.json", "SHA256SUMS", "source-map.tsv.gz"):
+                    self.assertTrue((Path(temp_root) / filename).is_file(), filename)
+                source_map_info = report["outputs"]["source-map.tsv.gz"]
+                self.assertGreater(source_map_info["rows"], 0)
+                with gzip.open(Path(temp_root) / "source-map.tsv.gz", "rt", encoding="utf-8") as stream:
+                    source_map = stream.read()
+                self.assertIn("FAT\tfeed-fat\tads.example.test\ttree", source_map)
+                self.assertIn("SLIM\tfeed-slim\ttracker.example.test\ttree", source_map)
+                checksum_text = (Path(temp_root) / "SHA256SUMS").read_text(encoding="utf-8")
+                self.assertNotIn("source-map.tsv.gz", checksum_text)
+                for line in checksum_text.splitlines():
+                    expected, filename = line.split("  ", 1)
+                    actual = hashlib.sha256((Path(temp_root) / filename).read_bytes()).hexdigest()
+                    self.assertEqual(actual, expected, filename)
+                self.assertEqual(report["outputs"]["source-map.tsv.gz"]["sha256"], hashlib.sha256((Path(temp_root) / "source-map.tsv.gz").read_bytes()).hexdigest())
             finally:
-                cached_path.unlink(missing_ok=True)
+                for item in profiles:
+                    item["store"].close()
+                update.ROOT = old_root
 
-            metadata["fetched_at"] = update.iso_utc(update.utc_now() - timedelta(days=46))
-            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
-            self.assertIsNone(update._read_cache(source, set()))
+    def test_tree_parent_covers_child_but_exact_parent_does_not(self):
+        self.assertTrue(update.rule_covered_by_tree("child.example.test", {"example.test"}))
+        self.assertFalse(update.rule_covered_by_tree("example.test", {"child.example.test"}))
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()

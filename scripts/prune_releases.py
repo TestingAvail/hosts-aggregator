@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
-"""Keep only the newest N GitHub releases and remove their tags."""
+"""Keep the newest N GitHub Releases and remove their old release tags."""
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
+
+OWNED_RELEASE_TAG_PREFIX = "hosts-aggregator-"
+
+
+def parse_date(release: dict) -> str:
+    return release.get("published_at") or release.get("created_at") or ""
+
+
+def select_releases_to_delete(releases: list[dict], keep: int = 30) -> list[dict]:
+    """Select stale releases created by this builder only."""
+    owned = [
+        release for release in releases
+        if str(release.get("tag_name", "")).startswith(OWNED_RELEASE_TAG_PREFIX)
+    ]
+    ordered = sorted(owned, key=parse_date, reverse=True)
+    return ordered[max(0, keep):]
 
 
 def api_request(url: str, token: str, method: str = "GET"):
@@ -19,70 +35,64 @@ def api_request(url: str, token: str, method: str = "GET"):
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "hosts-aggregator-release-maintenance",
+            "User-Agent": "hosts-aggregator-release-pruner",
         },
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read()
-            return json.loads(body) if body else None
-    except urllib.error.HTTPError as error:
-        if method == "DELETE" and error.code == 404:
-            return None
-        raise
+            payload = response.read()
+            return json.loads(payload) if payload else None
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")
+        raise RuntimeError(f"GitHub API {method} {url}: HTTP {exc.code}: {body[:500]}") from exc
 
 
-def list_all_releases(api: str, token: str) -> list[dict]:
-    """Fetch every release page; pruning must not stop at GitHub's 100-item cap."""
+def fetch_releases(repository: str, token: str) -> list[dict]:
     releases: list[dict] = []
     page = 1
     while True:
-        batch = api_request(f"{api}/releases?per_page=100&page={page}", token) or []
-        if not batch:
-            break
+        url = f"https://api.github.com/repos/{repository}/releases?per_page=100&page={page}"
+        batch = api_request(url, token)
+        if not isinstance(batch, list):
+            raise RuntimeError("Unexpected GitHub Releases API response")
         releases.extend(batch)
         if len(batch) < 100:
-            break
+            return releases
         page += 1
-    return releases
 
 
-def select_stale_releases(releases: list[dict], keep: int) -> list[dict]:
-    """Return only old releases owned by this project, never unrelated tags."""
-    owned = [item for item in releases if str(item.get("tag_name", "")).startswith("hosts-")]
-    owned.sort(
-        key=lambda item: item.get("published_at") or item.get("created_at") or "",
-        reverse=True,
-    )
-    return owned[keep:]
+def delete_release(repository: str, token: str, release: dict) -> None:
+    release_id = release["id"]
+    tag = release.get("tag_name", "")
+    api_request(f"https://api.github.com/repos/{repository}/releases/{release_id}", token, "DELETE")
+    if tag:
+        quoted = urllib.parse.quote(tag, safe="")
+        ref_url = f"https://api.github.com/repos/{repository}/git/refs/tags/{quoted}"
+        try:
+            api_request(ref_url, token, "DELETE")
+        except RuntimeError as exc:
+            # Release deletion succeeded; missing or protected tag should not
+            # turn the entire cleanup into a false failure.
+            print(f"WARNING: release removed but tag {tag!r} was not: {exc}", file=sys.stderr)
+    print(f"Deleted release: {tag or release_id}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--keep", type=int, default=30)
-    args = parser.parse_args()
-    token = os.environ.get("GITHUB_TOKEN")
-    repo = os.environ.get("GITHUB_REPOSITORY")
-    if not token or not repo:
-        print("GITHUB_TOKEN and GITHUB_REPOSITORY are required", file=sys.stderr)
-        return 2
-    if args.keep < 1:
-        parser.error("--keep must be >= 1")
-
-    api = f"https://api.github.com/repos/{repo}"
-    releases = list_all_releases(api, token)
-    # Never touch manually created releases or releases owned by another tool.
-    owned_count = sum(1 for item in releases if str(item.get("tag_name", "")).startswith("hosts-"))
-    stale = select_stale_releases(releases, args.keep)
-    for release in stale:
-        release_id = release["id"]
-        tag = release.get("tag_name", "")
-        api_request(f"{api}/releases/{release_id}", token, "DELETE")
-        if tag:
-            encoded = urllib.parse.quote(tag, safe="")
-            api_request(f"{api}/git/refs/tags/{encoded}", token, "DELETE")
-        print(f"Deleted old release: {tag}")
-    print(f"Kept {min(owned_count, args.keep)} newest project release(s).")
+def main() -> int:
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    token = os.environ.get("GITHUB_TOKEN", "")
+    keep = int(os.environ.get("KEEP_RELEASES", "30"))
+    if not repository or "/" not in repository:
+        raise SystemExit("GITHUB_REPOSITORY is missing or invalid")
+    if not token:
+        raise SystemExit("GITHUB_TOKEN is missing")
+    if keep < 1:
+        raise SystemExit("KEEP_RELEASES must be >= 1")
+    releases = fetch_releases(repository, token)
+    old = select_releases_to_delete(releases, keep)
+    print(f"Repository: {repository}; releases: {len(releases)}; keeping: {keep}; deleting: {len(old)}")
+    for release in old:
+        delete_release(repository, token, release)
+    print("Release cleanup complete.")
     return 0
 
 

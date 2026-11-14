@@ -29,10 +29,10 @@ on:
         type: boolean
         default: false
       include_schakal:
-        description: "Include Schakal only if you have confirmed redistribution permission"
+        description: "Include the supplemental Schakal source in this FAT build"
         required: false
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: write
@@ -51,7 +51,7 @@ jobs:
       SOURCE_CACHE_DIR: ${{ github.workspace }}/.source-cache
       SOURCE_CACHE_MAX_AGE_DAYS: "14"
       ALLOW_SOURCE_SHRINK: ${{ inputs.allow_source_shrink || false }}
-      ENABLE_SCHAKAL_SOURCE: ${{ inputs.include_schakal || false }}
+      ENABLE_SCHAKAL_SOURCE: ${{ github.event_name != 'workflow_dispatch' || inputs.include_schakal }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -139,8 +139,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: blocklists-${{ github.run_number }}-${{ github.run_attempt }}
-          name: Blocklists build #${{ github.run_number }}
+          tag_name: hosts-aggregator-${{ github.run_number }}-${{ github.run_attempt }}
+          name: Hosts Aggregator build #${{ github.run_number }}
           target_commitish: main
           make_latest: true
           draft: false

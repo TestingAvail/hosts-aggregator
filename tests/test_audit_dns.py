@@ -1,59 +1,59 @@
-import asyncio
-import sys
-import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-import audit_dns
+from audit_dns import classify_observations, extract_domains
 
 
-class DNSAuditInputTests(unittest.TestCase):
-    def test_loads_hosts_and_adguard_formats_and_deduplicates(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "sample.txt"
-            path.write_text(
-                "# comment\n"
-                "0.0.0.0 ads.example.test tracker.example.test\n"
-                "||ads.example.test^\n"
-                "! comment\n"
-                "||phishing.example.test^\n",
-                encoding="utf-8",
-            )
-            self.assertEqual(
-                audit_dns.load_domains([path]),
-                ["ads.example.test", "phishing.example.test", "tracker.example.test"],
-            )
+class DNSAuditTests(unittest.TestCase):
+    def test_extract_hosts_abp_and_oisd_wildcard(self):
+        lines = [
+            "# comment",
+            "0.0.0.0 ads.example.test tracker.example.test",
+            "||tree.example.test^",
+            "*.wild.example.test",
+            "@@||allowed.example.test^",
+            "invalid token extra",
+        ]
+        self.assertEqual(
+            extract_domains(lines),
+            {"ads.example.test", "tracker.example.test", "tree.example.test", "wild.example.test"},
+        )
 
+    def test_any_address_answer_means_resolves(self):
+        self.assertEqual(
+            classify_observations({
+                "1.1.1.1:A": "ANSWER", "1.1.1.1:AAAA": "NODATA",
+                "8.8.8.8:A": "ANSWER", "8.8.8.8:AAAA": "NODATA",
+            }),
+            "RESOLVES",
+        )
 
-class DNSAuditVerdictTests(unittest.TestCase):
-    def test_nxdomain_requires_two_resolver_agreement(self):
-        async def run_case(first, second):
-            with patch.object(
-                audit_dns, "doh_query", new=AsyncMock(side_effect=[first, second])
-            ) as query:
-                result = await audit_dns.audit_one(None, asyncio.Semaphore(1), "dead.example")
-                self.assertEqual(query.await_count, 2)
-                return result
+    def test_two_resolvers_nxdomain_is_confirmed(self):
+        self.assertEqual(
+            classify_observations({
+                "1.1.1.1:A": "NXDOMAIN", "1.1.1.1:AAAA": "NXDOMAIN",
+                "8.8.8.8:A": "NXDOMAIN", "8.8.8.8:AAAA": "NXDOMAIN",
+            }),
+            "CONFIRMED_NXDOMAIN",
+        )
 
-        confirmed = asyncio.run(run_case(("NXDOMAIN", "no such name"), ("NXDOMAIN", "no such name")))
-        disagreement = asyncio.run(run_case(("NXDOMAIN", "no such name"), ("RESOLVES", "answer")))
-        self.assertEqual(confirmed["verdict"], "CONFIRMED_NXDOMAIN")
-        self.assertEqual(disagreement["verdict"], "RESOLVES")
+    def test_nodata_is_not_nxdomain(self):
+        self.assertEqual(
+            classify_observations({
+                "1.1.1.1:A": "NODATA", "1.1.1.1:AAAA": "NODATA",
+                "8.8.8.8:A": "NODATA", "8.8.8.8:AAAA": "NODATA",
+            }),
+            "NO_ADDRESS_RECORD",
+        )
 
-    def test_timeout_or_nodata_is_never_marked_dead(self):
-        async def run_case(first):
-            with patch.object(audit_dns, "doh_query", new=AsyncMock(return_value=first)):
-                return await audit_dns.audit_one(None, asyncio.Semaphore(1), "maybe.example")
-
-        timeout = asyncio.run(run_case(("TIMEOUT", "timed out")))
-        nodata = asyncio.run(run_case(("NODATA", "no A record")))
-        self.assertEqual(timeout["verdict"], "INCONCLUSIVE")
-        self.assertEqual(nodata["verdict"], "NODATA")
+    def test_timeouts_are_indeterminate(self):
+        self.assertEqual(
+            classify_observations({
+                "1.1.1.1:A": "TIMEOUT", "1.1.1.1:AAAA": "TIMEOUT",
+                "8.8.8.8:A": "SERVFAIL", "8.8.8.8:AAAA": "NXDOMAIN",
+            }),
+            "INDETERMINATE",
+        )
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
