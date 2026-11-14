@@ -20,6 +20,7 @@ import asyncio
 import codecs
 import hashlib
 import gzip
+import fnmatch
 import ipaddress
 import json
 import os
@@ -35,15 +36,11 @@ from typing import Callable, Iterable, TextIO
 
 import aiohttp
 
-VERSION = "4.2.2"
+VERSION = "5.0.0"
 ROOT = Path(__file__).resolve().parent
 CACHE_DIR = Path(os.environ.get("SOURCE_CACHE_DIR", ROOT / ".source-cache"))
 CACHE_MAX_AGE_DAYS = int(os.environ.get("SOURCE_CACHE_MAX_AGE_DAYS", "14"))
 ALLOW_SOURCE_SHRINK = os.environ.get("ALLOW_SOURCE_SHRINK", "false").strip().lower() in {"1", "true", "yes", "on"}
-# Schakal is publicly available and included as an exact-host supplement.
-# Its reviewed forum post does not identify an open redistribution license;
-# attribution is retained and the owner must verify applicable terms.
-ENABLE_SCHAKAL_SOURCE = os.environ.get("ENABLE_SCHAKAL_SOURCE", "true").strip().lower() in {"1", "true", "yes", "on"}
 MAX_CONCURRENT_DOWNLOADS = 10
 DOWNLOAD_ATTEMPTS = 3
 MAX_LINE_LENGTH = 65536
@@ -65,78 +62,120 @@ class Source:
     purpose: str = "general"
     notes: str = ""
     fallback_urls: tuple[str, ...] = ()
+    license_id: str = "NOASSERTION"
+    license_url: str = ""
+    attribution: str = ""
+    redistribution_status: str = "permission_required"
 
 
 HAGEZI_MAIN = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
 HAGEZI_LEGACY = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest"
 
-# FAT: one primary tier + its threat add-on, independent curation approaches,
-# plus exact-host feeds that improve legacy hosts coverage.
+# Public profiles contain only sources with documented redistribution terms.
 FAT_SOURCES = [
     Source(
         "hagezi-pro-plus-wildcard", "HaGeZi Pro++ (wildcard domains)",
         f"{HAGEZI_MAIN}/wildcard/pro.plus-onlydomains.txt",
-        SCOPE_TREE, True, "ads-trackers-telemetry", "Primary aggressive DNS tier; wildcard semantics retained for AdGuard.",
+        SCOPE_TREE, True, "ads-trackers-telemetry",
+        "Primary aggressive DNS tier; wildcard semantics retained for AdGuard.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "hagezi-pro-plus-hosts", "HaGeZi Pro++ (legacy hosts expansion)",
         f"{HAGEZI_LEGACY}/hosts/pro.plus.txt",
-        SCOPE_EXACT, False, "hosts-expansion", "Enumerated known hostnames for hosts consumers; cannot represent unknown dynamic subdomains.",
+        SCOPE_EXACT, False, "hosts-expansion",
+        "Enumerates known subdomains for hosts consumers; cannot cover unknown dynamic subdomains.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "hagezi-tif-medium", "HaGeZi TIF Medium",
         f"{HAGEZI_MAIN}/wildcard/tif.medium-onlydomains.txt",
-        SCOPE_TREE, False, "threat-intelligence", "Larger threat feed companion for the FAT/high-capacity profile; not a replacement for the main tier.",
+        SCOPE_TREE, False, "threat-intelligence",
+        "Threat-intelligence companion for high-capacity FAT profile; not the full TIF.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "oisd-big", "OISD Big (domainswild)", "https://big.oisd.nl/domainswild",
-        SCOPE_TREE, False, "ads-trackers-malware", "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
+        SCOPE_TREE, False, "ads-trackers-malware",
+        "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
+        license_id="GPL-3.0", license_url="https://github.com/sjhgvr/oisd/blob/master/LICENSE",
+        attribution="OISD contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
-        "goodbyeads", "GoodbyeAds",
-        "https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt",
-        SCOPE_EXACT, False, "mobile-ads-trackers", "Hosts feed. See SOURCES.md for attribution and upstream source-license caveat.",
+        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
+        SCOPE_EXACT, False, "mobile-ads-trackers",
+        "Feed declares CC BY 3.0. Last observed hosts-file content commit: 2023-04-29; retain only while measured contribution justifies it.",
+        license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
+        attribution="AdAway contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
-        "stevenblack-unified", "StevenBlack Unified",
-        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        SCOPE_EXACT, False, "adware-malware", "Curated hosts aggregator; component feeds are not re-added separately.",
+        "nocoin", "NoCoin Filter List",
+        "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
+        SCOPE_EXACT, False, "cryptomining",
+        "MIT-licensed hosts-format cryptomining feed; upstream hosts.txt was updated 2026-09-12.",
+        license_id="MIT", license_url="https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE",
+        attribution="Hosh (hoshsadiq)", redistribution_status="approved_with_attribution",
     ),
     Source(
-        "phishing-army", "Phishing Army (canonical Adblock feed)",
-        "https://phishing.army/download/phishing-army-adblock.txt",
-        SCOPE_TREE, False, "phishing", "Canonical reviewed phishing-host feed. A listed tenant hostname covers that hostname and its descendants, but never its unrelated parent/shared-hosting provider.",
+        "r-a-y-adguard-dns", "AdGuard DNS (r-a-y/mobile-hosts)",
+        "https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt",
+        SCOPE_EXACT, False, "ads-trackers-telemetry",
+        "Large DNS-oriented composite feed. Its GPL-3.0 repository documents AdGuard, EasyList, EasyPrivacy, ABPindo and hostsVN inputs. FAT only.",
+        license_id="GPL-3.0", license_url="https://github.com/r-a-y/mobile-hosts/blob/master/LICENSE",
+        attribution="r-a-y/mobile-hosts contributors and documented upstream filter authors",
+        redistribution_status="approved_with_attribution",
     ),
- ]
-
-SCHAKAL_SOURCE = Source(
-    "schakal-full-hosts", "Schakal full hosts", "https://schakal.ru/hosts/hosts.txt",
-    SCOPE_EXACT, False, "community-hosts",
-    "Default FAT exact-host supplement; uses the community-documented hopto.org mirror if the primary host is unreachable.",
-    ("https://schakal.hopto.org/hosts.txt",),
-)
-if ENABLE_SCHAKAL_SOURCE:
-    FAT_SOURCES.append(SCHAKAL_SOURCE)
+]
 
 SLIM_SOURCES = [
     Source(
         "hagezi-light-wildcard", "HaGeZi Light (wildcard domains)",
         f"{HAGEZI_MAIN}/wildcard/light-onlydomains.txt",
-        SCOPE_TREE, True, "ads-trackers", "Compatibility-oriented primary tier.",
+        SCOPE_TREE, True, "ads-trackers",
+        "Compatibility-oriented primary tier.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "hagezi-light-hosts", "HaGeZi Light (legacy hosts expansion)",
         f"{HAGEZI_LEGACY}/hosts/light.txt",
-        SCOPE_EXACT, False, "hosts-expansion", "Enumerated known hostnames for hosts consumers.",
+        SCOPE_EXACT, False, "hosts-expansion",
+        "Enumerated known hostnames for hosts consumers.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "hagezi-tif-mini", "HaGeZi TIF Mini",
         f"{HAGEZI_MAIN}/wildcard/tif.mini-onlydomains.txt",
-        SCOPE_TREE, False, "threat-intelligence", "Smaller threat-intelligence companion for resource-constrained routers.",
+        SCOPE_TREE, False, "threat-intelligence",
+        "Compact threat-intelligence companion for resource-constrained profiles.",
+        license_id="GPL-3.0", license_url="https://github.com/hagezi/dns-blocklists/blob/main/LICENSE",
+        attribution="HaGeZi contributors", redistribution_status="approved_with_attribution",
     ),
     Source(
         "oisd-small", "OISD Small (domainswild)", "https://small.oisd.nl/domainswild",
-        SCOPE_TREE, False, "ads", "Small wildcard-domain list; Big and Small are alternatives, not layers.",
+        SCOPE_TREE, False, "ads",
+        "Small wildcard-domain list; Big and Small are alternatives, not layers.",
+        license_id="GPL-3.0", license_url="https://github.com/sjhgvr/oisd/blob/master/LICENSE",
+        attribution="OISD contributors", redistribution_status="approved_with_attribution",
+    ),
+    Source(
+        "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
+        SCOPE_EXACT, False, "mobile-ads-trackers",
+        "CC BY 3.0 feed; last observed hosts-file content commit 2023-04-29.",
+        license_id="CC-BY-3.0", license_url="https://creativecommons.org/licenses/by/3.0/",
+        attribution="AdAway contributors", redistribution_status="approved_with_attribution",
+    ),
+    Source(
+        "nocoin", "NoCoin Filter List",
+        "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
+        SCOPE_EXACT, False, "cryptomining",
+        "MIT-licensed hosts-format cryptomining feed; upstream hosts.txt was updated 2026-09-12.",
+        license_id="MIT", license_url="https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE",
+        attribution="Hosh (hoshsadiq)", redistribution_status="approved_with_attribution",
     ),
 ]
 
@@ -174,7 +213,7 @@ FORCE_BLOCK_TREE = {
     "ads.mail.ru", "ad.mail.ru", "trk.mail.ru", "yabs.yandex.ru",
     "redirect.appmetrica.yandex.com", "s.click.aliexpress.com", "aemetrics.aliexpress.ru",
     "fourier.aliexpress.com", "acjs.aliyun.com", "mmstat.com", "ru.mmstat.com",
-    "fourier.taobao.com", "piwik.opendesktop.org", "app-measurement.com",
+    "fourier.taobao.com", "app-measurement.com",
     "firebase-settings.crashlytics.com", "googletagmanager.com", "doubleclick.net",
     "doubleclick.com", "googleads.g.doubleclick.net", "googlesyndication.com",
     "googleadservices.com", "googletagservices.com", "googleads.com", "2mdn.net",
@@ -227,10 +266,15 @@ WHITELIST_TREE = {
 # sample. Keep these narrow: a broad allow tree would hide unrelated tracking
 # subdomains and create avoidable underblocking.
 MANUAL_ALLOW_EXACT = {
-    "www.baihe.com",             # legitimate dating/community service hostname
-    "jobs.sciencecareers.org",   # legitimate science jobs/career hostname
-    "cardlytics.com",            # bank/card-linked offers and cashback apex
+    "www.baihe.com",             # reviewed compatibility exception
+    "jobs.sciencecareers.org",   # reviewed compatibility exception
+    "cardlytics.com",            # reviewed compatibility exception
+    "s.youtube.com",             # YouTube viewing history
+    "piwik.opendesktop.org",     # KDE theme downloads
+    "hl-img.peco.uodoo.com",     # UC Browser functionality
+    "browser.cloud.ucweb.com",   # UC Browser functionality
 }
+MANUAL_ALLOW_PATTERNS = ("mini5*.opera-mini.net",)
 
 DOMAIN_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 ABP_TREE_RULE = re.compile(r"^\|\|([a-z0-9.-]+)\^(?:\$(important))?$", re.IGNORECASE)
@@ -303,6 +347,17 @@ def is_protected_rule(domain: str, scope: str, force: bool = False) -> bool:
                 return True
             if scope == SCOPE_TREE and is_parent_of(domain, zone):
                 return True
+        # Explicit compatibility exceptions may override ordinary imported/forced
+        # entries, but never hard-protected authentication/connectivity zones.
+        if is_manual_allowlisted(domain):
+            return True
+        if scope == SCOPE_TREE and any(is_parent_of(domain, exact) for exact in MANUAL_ALLOW_EXACT):
+            return True
+        if scope == SCOPE_TREE and any(
+            domain == suffix or is_parent_of(domain, suffix)
+            for suffix in manual_allow_pattern_suffixes()
+        ):
+            return True
         return False
     for zone in WHITELIST_TREE:
         if is_same_or_subdomain(domain, zone):
@@ -310,16 +365,35 @@ def is_protected_rule(domain: str, scope: str, force: bool = False) -> bool:
         # A tree rule on a parent would swallow an allowlisted protected tree.
         if scope == SCOPE_TREE and is_parent_of(domain, zone):
             return True
-    if domain in MANUAL_ALLOW_EXACT:
+    if is_manual_allowlisted(domain):
         return True
     # Do not let a tree rule on a parent swallow a narrowly allowlisted FQDN.
     if scope == SCOPE_TREE and any(is_parent_of(domain, exact) for exact in MANUAL_ALLOW_EXACT):
+        return True
+    if scope == SCOPE_TREE and any(
+        domain == suffix or is_parent_of(domain, suffix)
+        for suffix in manual_allow_pattern_suffixes()
+    ):
         return True
     return False
 
 
 def is_force_blocked(domain: str, force_roots: set[str]) -> bool:
     return any(is_same_or_subdomain(domain, root) for root in force_roots)
+
+
+def is_manual_allowlisted(domain: str) -> bool:
+    return domain in MANUAL_ALLOW_EXACT or any(
+        fnmatch.fnmatchcase(domain, pattern) for pattern in MANUAL_ALLOW_PATTERNS
+    )
+
+
+def manual_allow_pattern_suffixes() -> set[str]:
+    return {
+        pattern.split("*", 1)[-1].lstrip(".")
+        for pattern in MANUAL_ALLOW_PATTERNS
+        if "*" in pattern
+    }
 
 
 def parse_source_line(
@@ -432,12 +506,19 @@ class DomainStore:
         self.db.execute("CREATE TABLE rules (domain TEXT PRIMARY KEY, scope TEXT NOT NULL CHECK(scope IN ('exact','tree'))) WITHOUT ROWID")
         self.db.execute(
             "CREATE TABLE source_domains (source_id TEXT NOT NULL, domain TEXT NOT NULL, "
-            "scope TEXT NOT NULL CHECK(scope IN ('exact','tree')), PRIMARY KEY(source_id,domain)) WITHOUT ROWID"
+            "scope TEXT NOT NULL CHECK(scope IN ('exact','tree')), license_id TEXT NOT NULL, "
+            "attribution TEXT NOT NULL, PRIMARY KEY(source_id,domain)) WITHOUT ROWID"
         )
 
-    def add_source_file(self, source_id: str, path: Path) -> int:
+    def add_source_file(
+        self,
+        source_id: str,
+        path: Path,
+        license_id: str = "NOASSERTION",
+        attribution: str = "",
+    ) -> int:
         before = self.db.total_changes
-        batch: list[tuple[str, str, str]] = []
+        batch: list[tuple[str, str, str, str, str]] = []
         with self.db:
             with path.open("r", encoding="utf-8") as stream:
                 for line in stream:
@@ -450,7 +531,7 @@ class DomainStore:
                         continue
                     if scope not in {SCOPE_EXACT, SCOPE_TREE} or not normalize_domain(domain):
                         continue
-                    batch.append((source_id, domain, scope))
+                    batch.append((source_id, domain, scope, license_id, attribution))
                     if len(batch) >= INSERT_BATCH_SIZE:
                         self._insert_batch(batch)
                         batch.clear()
@@ -458,18 +539,22 @@ class DomainStore:
                 self._insert_batch(batch)
         return self.db.total_changes - before
 
-    def _insert_batch(self, batch: list[tuple[str, str, str]]) -> None:
+    def _insert_batch(self, batch: list[tuple[str, str, str, str, str]]) -> None:
         self.db.executemany(
-            "INSERT INTO source_domains(source_id,domain,scope) VALUES(?,?,?) "
-            "ON CONFLICT(source_id,domain) DO UPDATE SET scope=CASE "
-            "WHEN excluded.scope='tree' THEN 'tree' ELSE source_domains.scope END",
+            "INSERT INTO source_domains(source_id,domain,scope,license_id,attribution) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(source_id,domain) DO UPDATE SET "
+            "scope=CASE WHEN excluded.scope='tree' THEN 'tree' ELSE source_domains.scope END, "
+            "license_id=excluded.license_id, attribution=excluded.attribution",
             batch,
         )
-        self.db.executemany("INSERT OR IGNORE INTO domains(domain) VALUES(?)", ((d,) for _, d, _ in batch))
+        self.db.executemany(
+            "INSERT OR IGNORE INTO domains(domain) VALUES(?)",
+            ((domain,) for _, domain, _, _, _ in batch),
+        )
         self.db.executemany(
             "INSERT INTO rules(domain,scope) VALUES(?,?) ON CONFLICT(domain) DO UPDATE SET "
             "scope=CASE WHEN excluded.scope='tree' THEN 'tree' ELSE rules.scope END",
-            ((d, scope) for _, d, scope in batch),
+            ((domain, scope) for _, domain, scope, _, _ in batch),
         )
 
     def add_manual_tree_rules(self, domains: Iterable[str]) -> None:
@@ -769,6 +854,29 @@ async def fetch_source(
         return {"source": source, "status": "failed", "error": str(error)}
 
 
+PUBLIC_REDISTRIBUTION_STATUSES = {"approved", "approved_with_attribution"}
+
+
+def validate_public_sources(sources: Iterable[Source]) -> None:
+    """Fail closed unless every active source has explicit public redistribution metadata."""
+    seen: set[str] = set()
+    errors: list[str] = []
+    for source in sources:
+        if source.id in seen:
+            errors.append(f"duplicate source id: {source.id}")
+        seen.add(source.id)
+        if source.redistribution_status not in PUBLIC_REDISTRIBUTION_STATUSES:
+            errors.append(f"{source.id}: redistribution status is {source.redistribution_status!r}")
+        if not source.license_id or source.license_id == "NOASSERTION":
+            errors.append(f"{source.id}: missing verified license identifier")
+        if not source.license_url:
+            errors.append(f"{source.id}: missing license URL")
+        if not source.attribution:
+            errors.append(f"{source.id}: missing attribution text")
+    if errors:
+        raise RuntimeError("Public build blocked by source policy:\n- " + "\n- ".join(errors))
+
+
 def load_previous_host_count(path: Path) -> int:
     if not path.is_file():
         return 0
@@ -783,6 +891,7 @@ def load_previous_host_count(path: Path) -> int:
 async def build_profile(profile: str) -> dict:
     started = time.monotonic()
     sources = PROFILE_SOURCES[profile]
+    validate_public_sources(sources)
     force_roots = set(FORCE_BLOCK_TREE)
     if profile == "FAT":
         force_roots.update(FAT_EXTRA_FORCE_BLOCK_TREE)
@@ -807,7 +916,12 @@ async def build_profile(profile: str) -> dict:
             raise RuntimeError(f"{profile}: primary source unavailable; publication refused")
 
         for item in results:
-            store.add_source_file(item["source"].id, item["path"])
+            store.add_source_file(
+                item["source"].id,
+                item["path"],
+                license_id=item["source"].license_id,
+                attribution=item["source"].attribution,
+            )
             item["path"].unlink(missing_ok=True)
 
         manual = set(FORCE_BLOCK_TREE)
@@ -836,6 +950,10 @@ async def build_profile(profile: str) -> dict:
                 "fallback_urls": list(source.fallback_urls),
                 "status": item["status"], "primary": source.primary,
                 "purpose": source.purpose, "default_scope": source.default_scope,
+                "license_id": source.license_id,
+                "license_url": source.license_url,
+                "attribution": source.attribution,
+                "redistribution_status": source.redistribution_status,
                 "accepted_rules_in_feed": int(item.get("accepted_rules", 0)),
                 **source_metric,
                 "notes": source.notes,
@@ -865,7 +983,12 @@ async def build_profile(profile: str) -> dict:
 
 def audit_protected_rules(store: DomainStore, profile: str) -> None:
     """Reject exact blocks of protected hosts or tree rules shadowing services."""
-    for protected in GOOGLE_PROTECTED_ZONES | AI_STUDIO_PROTECTED_ZONES | MANUAL_ALLOW_EXACT:
+    allow_pattern_samples = {
+        pattern.replace("*", "0") for pattern in MANUAL_ALLOW_PATTERNS
+    } | {
+        pattern.replace("*", "example") for pattern in MANUAL_ALLOW_PATTERNS
+    }
+    for protected in GOOGLE_PROTECTED_ZONES | AI_STUDIO_PROTECTED_ZONES | MANUAL_ALLOW_EXACT | allow_pattern_samples:
         # A tree rule at this name or any parent would match this protected host.
         for parent in suffixes(protected):
             if store.contains_rule(parent, SCOPE_TREE):
@@ -909,7 +1032,7 @@ def run_self_tests() -> None:
     assert parse_source_line("ads.mail.ru", SCOPE_TREE) == [("ads.mail.ru", SCOPE_TREE)]
     assert parse_source_line("tracker.mail.ru", SCOPE_TREE) == []
 
-    # False-positive examples sampled from Schakal's unique set are excluded.
+    # Manually reviewed functionality exceptions supplied for this project.
     assert parse_source_line("www.baihe.com", SCOPE_EXACT) == []
     assert parse_source_line("jobs.sciencecareers.org", SCOPE_EXACT) == []
     assert parse_source_line("cardlytics.com", SCOPE_EXACT) == []
@@ -918,6 +1041,14 @@ def run_self_tests() -> None:
     assert parse_source_line("ads.baihe.com", SCOPE_TREE) == [("ads.baihe.com", SCOPE_TREE)]
     assert parse_source_line("cardlytics.com", SCOPE_TREE) == []
     assert parse_source_line("sciencecareers.org", SCOPE_TREE) == []  # must not swallow jobs.sciencecareers.org
+    assert parse_source_line("s.youtube.com", SCOPE_EXACT) == []
+    assert parse_source_line("youtube.com", SCOPE_TREE) == []
+    assert parse_source_line("piwik.opendesktop.org", SCOPE_EXACT) == []
+    assert parse_source_line("opendesktop.org", SCOPE_TREE) == []
+    assert parse_source_line("hl-img.peco.uodoo.com", SCOPE_EXACT) == []
+    assert parse_source_line("browser.cloud.ucweb.com", SCOPE_EXACT) == []
+    assert parse_source_line("mini50.opera-mini.net", SCOPE_EXACT) == []
+    assert parse_source_line("opera-mini.net", SCOPE_TREE) == []
 
     # AdGuard exact vs tree renderings must remain distinct.
     store = DomainStore()
@@ -963,7 +1094,8 @@ def write_hosts(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write("# Exact hostnames only. Tree-feed roots and all known expanded hosts are listed.\n")
     stream.write("# Hosts format cannot block unknown/dynamic subdomains.\n")
     stream.write("# Generated automatically; do not edit manually.\n")
-    stream.write("# Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
+    stream.write("# Data licenses and attribution are per-source; the root LICENSE covers code only.\n")
+    stream.write("# Sources: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
     count = 0
     for (domain,) in store.all_domains():
         stream.write(f"0.0.0.0 {domain}\n")
@@ -976,7 +1108,8 @@ def write_adguard(store: DomainStore, stream: TextIO, title: str) -> int:
     stream.write("! Format: AdGuard DNS filtering syntax\n")
     stream.write("! ||domain^ = domain and all subdomains; bare domain = exact hostname only.\n")
     stream.write("! Generated automatically; do not edit manually.\n")
-    stream.write("! Sources and attribution: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
+    stream.write("! Data licenses and attribution are per-source; the root LICENSE covers code only.\n")
+    stream.write("! Sources: https://github.com/TestingAvail/hosts-aggregator/blob/main/SOURCES.md\n\n")
 
     tree_rules: set[str] = set()
     tree_cursor = store.db.execute("SELECT domain FROM rules WHERE scope='tree' ORDER BY length(domain),domain")
@@ -1048,20 +1181,24 @@ def atomic_publish(staged: dict[Path, Path]) -> None:
 
 
 def stage_source_map(profiles: list[dict]) -> tuple[Path, int]:
-    """Stage a compressed provenance map: profile, source, scope, domain."""
+    """Stage a compressed provenance map with source license and attribution."""
     fd, temp_name = tempfile.mkstemp(prefix=".source-map-", suffix=".tsv.gz", dir=ROOT)
     os.close(fd)
     rows = 0
     try:
         with gzip.open(temp_name, "wt", encoding="utf-8", newline="\n", compresslevel=6) as stream:
-            stream.write("profile\tsource_id\tdomain\tscope\n")
+            stream.write("profile\tsource_id\tdomain\tscope\tlicense_id\tattribution\n")
             for result in profiles:
                 profile = result["profile"]
                 cursor = result["store"].db.execute(
-                    "SELECT source_id,domain,scope FROM source_domains ORDER BY source_id,domain"
+                    "SELECT source_id,domain,scope,license_id,attribution "
+                    "FROM source_domains ORDER BY source_id,domain"
                 )
-                for source_id, domain, scope in cursor:
-                    stream.write(f"{profile}\t{source_id}\t{domain}\t{scope}\n")
+                for source_id, domain, scope, license_id, attribution in cursor:
+                    safe_attribution = attribution.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+                    stream.write(
+                        f"{profile}\t{source_id}\t{domain}\t{scope}\t{license_id}\t{safe_attribution}\n"
+                    )
                     rows += 1
         os.chmod(temp_name, 0o644)
         return Path(temp_name), rows
@@ -1108,7 +1245,7 @@ def publish_generation(profiles: list[dict]) -> dict:
         }
 
         report = {
-            "schema_version": 2,
+            "schema_version": 3,
             "builder_version": VERSION,
             "generated_at_utc": iso_utc(),
             "semantics": {
@@ -1117,13 +1254,14 @@ def publish_generation(profiles: list[dict]) -> dict:
                 "dns_audit": "Non-destructive only; no domain is automatically removed based on liveness checks.",
             },
             "policy": {
-                "schakal_source_enabled": ENABLE_SCHAKAL_SOURCE,
-                "schakal_redistribution_license_review": "Schakal is enabled by default as an exact-host FAT supplement; the reviewed public forum post did not identify an explicit open redistribution license, so maintain attribution and verify or obtain permission for public redistribution.",
+                "public_redistribution_required": True,
+                "approved_source_statuses": sorted(PUBLIC_REDISTRIBUTION_STATUSES),
                 "all_configured_sources_required": True,
                 "source_cache_max_age_days": CACHE_MAX_AGE_DAYS,
                 "allow_source_shrink_override_enabled": ALLOW_SOURCE_SHRINK,
                 "allowlisted_tree_count": len(WHITELIST_TREE),
                 "allowlisted_exact_count": len(MANUAL_ALLOW_EXACT),
+                "allowlisted_pattern_count": len(MANUAL_ALLOW_PATTERNS),
                 "manual_force_block_tree_count": len(FORCE_BLOCK_TREE),
             },
             "profiles": [],
@@ -1205,7 +1343,12 @@ def cli() -> None:
             print(f"\n{profile}:")
             for source in sources:
                 marker = " [PRIMARY]" if source.primary else ""
-                print(f"- {source.name}{marker}\n  scope={source.default_scope}; purpose={source.purpose}\n  {source.url}")
+                print(
+                    f"- {source.name}{marker}\n"
+                    f"  scope={source.default_scope}; purpose={source.purpose}\n"
+                    f"  license={source.license_id}; redistribution={source.redistribution_status}\n"
+                    f"  {source.url}"
+                )
         return
     asyncio.run(async_main())
 

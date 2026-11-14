@@ -1,57 +1,71 @@
-# Source inventory and scope policy
+# Source inventory, licenses and publication policy
 
-This file describes the exact feeds used by the builder. Feed semantics are part of the configuration: do not change a source from `exact` to `tree` unless its upstream format explicitly means the domain and all subdomains should be blocked.
+This is the authoritative register for feeds actually used by public builds. Each enabled source must have a documented license, license URL, attribution, and explicit public-redistribution status. The builder enforces this before downloading any source.
 
-## FAT
+## Active FAT sources
 
-| Source ID | Feed | Scope | Purpose / notes |
-|---|---|---|---|
-| `hagezi-pro-plus-wildcard` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt> | tree | Primary aggressive HaGeZi tier. |
-| `hagezi-pro-plus-hosts` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/pro.plus.txt> | exact | Legacy hosts expansion to list known subdomains; does not cover unknown future subdomains. |
-| `hagezi-tif-medium` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.medium-onlydomains.txt> | tree | Companion threat-intelligence tier; it is not the full TIF. |
-| `oisd-big` | <https://big.oisd.nl/domainswild> | tree | OISD wildcard-domain format; input syntax `*.example.org` is parsed as tree scope. |
-| `goodbyeads` | <https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt> | exact | Hosts feed; audit source catalog and upstream component terms before redistribution. |
-| `stevenblack-unified` | <https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts> | exact | Curated unified hosts feed; do not add all of its components individually. |
-| `phishing-army` | <https://phishing.army/download/phishing-army-adblock.txt> | tree per listed hostname | Canonical reviewed Adblock feed. A listed tenant hostname and its descendants are blocked without promoting it to the shared provider's parent domain. |
-| `schakal-full-hosts` | <https://schakal.ru/hosts/hosts.txt> | exact | Full global Schakal hosts list, included in FAT as exact hostnames only; never broadened to parent trees. Attribution is retained here. Verify redistribution terms. |
+| Source ID | Feed | Format / scope | License | Attribution | Status |
+|---|---|---|---|---|---|
+| `hagezi-pro-plus-wildcard` | [HaGeZi Pro++ wildcard](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `hagezi-pro-plus-hosts` | [HaGeZi Pro++ legacy hosts](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/pro.plus.txt) | hosts / exact | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `hagezi-tif-medium` | [HaGeZi TIF Medium](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.medium-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `oisd-big` | [OISD Big](https://big.oisd.nl/domainswild) | `domainswild` / tree | GPL-3.0 | OISD contributors | approved with attribution |
+| `adaway` | [AdAway hosts](https://adaway.org/hosts.txt) | hosts / exact | CC BY 3.0 | AdAway contributors | approved with attribution |
+| `nocoin` | [NoCoin hosts](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt) | hosts / exact | MIT | Hosh (hoshsadiq) | approved with attribution |
+| `r-a-y-adguard-dns` | [AdGuard DNS (r-a-y/mobile-hosts)](https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt) | mixed DNS filter syntax | GPL-3.0 | r-a-y/mobile-hosts and documented upstream authors | approved with attribution |
 
-## SLIM
+## Active SLIM sources
 
-| Source ID | Feed | Scope | Purpose / notes |
-|---|---|---|---|
-| `hagezi-light-wildcard` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/light-onlydomains.txt> | tree | Compatibility-oriented main tier. |
-| `hagezi-light-hosts` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/light.txt> | exact | Enumerated known hostnames for hosts consumers. |
-| `hagezi-tif-mini` | <https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.mini-onlydomains.txt> | tree | Compact threat-intelligence companion for lower-capacity profile. |
-| `oisd-small` | <https://small.oisd.nl/domainswild> | tree | Smaller OISD option. OISD Big is not added on top of Small. |
+| Source ID | Feed | Format / scope | License | Attribution | Status |
+|---|---|---|---|---|---|
+| `hagezi-light-wildcard` | [HaGeZi Light wildcard](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/light-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `hagezi-light-hosts` | [HaGeZi Light legacy hosts](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/light.txt) | hosts / exact | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `hagezi-tif-mini` | [HaGeZi TIF Mini](https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.mini-onlydomains.txt) | domain-only / tree | GPL-3.0 | HaGeZi contributors | approved with attribution |
+| `oisd-small` | [OISD Small](https://small.oisd.nl/domainswild) | `domainswild` / tree | GPL-3.0 | OISD contributors | approved with attribution |
+| `adaway` | [AdAway hosts](https://adaway.org/hosts.txt) | hosts / exact | CC BY 3.0 | AdAway contributors | approved with attribution |
+| `nocoin` | [NoCoin hosts](https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt) | hosts / exact | MIT | Hosh (hoshsadiq) | approved with attribution |
 
-## Why the legacy HaGeZi hosts feeds are present
+## License references and caveats
 
-The modern wildcard-domain feeds are the authoritative source for AdGuard output. Their wildcard semantics cannot be represented in a conventional hosts file. The separate HaGeZi legacy hosts files enumerate known hostnames, improving hosts-format coverage for currently known subdomains. HaGeZi explicitly warns that legacy hosts/subdomain formats cannot reliably cover generic, dynamic, or previously unknown subdomains. The two feeds are not redundant for hosts consumers; for AdGuard output, exact entries already covered by a tree rule are compacted away.
+- **HaGeZi:** [upstream license](https://github.com/hagezi/dns-blocklists/blob/main/LICENSE). The published lists are GPL-3.0. Some underlying third-party inputs may have separate terms; this project consumes the published HaGeZi feeds.
+- **OISD:** [upstream repository](https://github.com/sjhgvr/oisd). OISD identifies its published data under GPL-3.0. Re-check current upstream terms before changing versions or use.
+- **AdAway:** the hosts file itself declares [CC Attribution 3.0](https://creativecommons.org/licenses/by/3.0/). Its hosts.txt content history shows the latest content change on 2023-04-29. It is included because its terms are explicit, but its freshness and unique contribution must be monitored.
+- **NoCoin:** the hosts feed points to MIT, and the upstream repository contains an MIT license. Its hosts.txt file was updated on 2026-09-12.
+- **r-a-y/mobile-hosts:** the repository declares GPL-3.0. Its README describes AdGuard DNS as a DNS-oriented composite built from AdGuard, EasyList, EasyPrivacy, ABPindo and hostsVN inputs. This project attributes the aggregator and its documented upstream authors.
+- **Generated outputs:** each output combines data under different source licenses. This repository does not publish a single blanket license for the combined data. The original builder code remains MIT under root LICENSE; data rights remain source-specific.
 
-## Source selection principles
+## Scope policy
 
-- Use one HaGeZi main tier per profile; do not stack Light, Pro, Pro++, and Ultimate together.
-- TIF is a separate threat-intelligence complement. FAT uses TIF Medium for higher coverage; current HaGeZi documentation lists roughly 363k entries for Medium and warns that AdGuard Home needs at least 1 GB RAM. SLIM uses TIF Mini as the compact alternative (roughly 186k entries). Neither is the full TIF.
-- Use OISD Big OR OISD Small in a profile, not both. Big includes the broader coverage.
-- HaGeZi's Native Tracker categories are already integrated into the standard tier levels. Do not add all Native Tracker device feeds on top of Pro++ or Light without checking the official inclusion matrix; that would mostly duplicate data and can increase breakage.
-- Do not blindly re-add the component sources already curated by an aggregator. OISD's catalog already incorporates many well-known lists and has its own deduplication/quality process.
-- The HaGeZi Most Abused TLDs feed is deliberately not included in normal FAT: it can block entire TLDs and the project warns about legitimate collateral. NRD/DGA feeds are also excluded from normal FAT because the upstream warns they are very large, potentially false-positive-prone, and not guaranteed to be refreshed daily. These are candidates for a separate opt-in high-security profile, not silent additions to the router defaults.
-- Schakal is included as an exact-host supplemental FAT source to add hostnames not present in the other selected feeds. Its entries are never widened to parent trees. The reviewed forum post exposes a public feed URL but no explicit open redistribution license was identified; verify terms or obtain permission before public redistribution. A manual workflow run can disable the source.
-- HaGeZi's legacy hosts/subdomain project explicitly warns that these formats are incomplete for dynamic or previously unknown subdomains. The legacy hosts feeds are only a best-effort expansion for the hosts output; use the AdGuard output for wildcard coverage whenever supported.
-- HaGeZi integrates Native Tracker categories into its standard tiers at tier-specific blocking strengths. Pro++ is already aggressive here; do not layer the same device feeds on top without checking its inclusion matrix.
-- HaGeZi's Most Abused TLDs feed blocks entire top-level domains and carries explicit collateral-risk warnings; it is not included in normal FAT. NRD/DGA feeds can contain millions of newly registered names and false positives and are not included in the normal router profiles.
+- `exact` means only the listed fully qualified hostname.
+- `tree` means the listed domain and its subdomains.
+- Hosts mappings (for example, `0.0.0.0 ads.example.org`) are exact-only.
+- ABP `||example.org^` and OISD `*.example.org` are tree rules.
+- Unsupported ABP modifiers and exceptions are discarded rather than widened.
+- Hosts output enumerates known names only. It cannot block arbitrary future subdomains.
 
 ## Compatibility exceptions
 
-Only these exact hostnames are currently kept out of the blocklists based on the false-positive review of additional Schakal candidates: `www.baihe.com`, `jobs.sciencecareers.org`, and `cardlytics.com`. This is deliberately not a parent-domain allowlist. A parent tree rule that would cover one of these exact names is rejected, while other sibling subdomains remain eligible for inclusion.
+The following hosts were supplied as functionality exceptions in the referenced Schakal 4PDA post. Previously configured exceptions are retained where still relevant. Exceptions are exact-host unless noted; the Opera Mini pattern is handled separately.
 
-## License and attribution notes
+| Exception | Reason supplied |
+|---|---|
+| `s.youtube.com` | YouTube viewing history |
+| `piwik.opendesktop.org` | KDE theme downloads |
+| `yt3.ggpht.com` | YouTube channel icons |
+| `mini5*.opera-mini.net` | Opera Mini functionality |
+| `suggestqueries.google.com` | Google search suggestions (also covered by Google protected zone) |
+| `redirector.googlevideo.com` | Third-party YouTube video downloads |
+| `hl-img.peco.uodoo.com` | UC Browser functionality |
+| `browser.cloud.ucweb.com` | UC Browser functionality |
+| `gstaticadssl.l.google.com` | Google fonts (also covered by protected zone) |
+| `audio-ak-spotify-com.akamaized.net` | Spotify device switching |
+| `stat.online.sberbank.ru` | Sberbank application functionality |
+| `s3.amazonaws.com` | File downloads, including GitHub-related assets |
 
-- **HaGeZi:** official list repository states GPL-3.0; this project includes the GPL-3.0 text in `licenses/GPL-3.0.txt`. Preserve upstream attribution and comply with GPL-3.0 when redistributing derived list data.
-- **OISD:** upstream repository identifies GPL-3.0; same license text is included. Follow the upstream terms for redistribution.
-- **GoodbyeAds:** upstream repository code license is MIT, but the source catalog includes component feeds with differing terms (including non-commercial, no-license, or all-rights-reserved entries). The repository's MIT license should not be treated as blanket permission for every upstream feed's data.
-- **StevenBlack:** check the current repository license and attribution requirements when redistributing its derived data.
-- **Phishing Army:** the project says its generated feeds are freely accessible, but that does not grant or sublicense rights from its independent upstream intelligence providers. The project places responsibility for checking upstream terms on organizations and services using the feed. Its current documentation distinguishes exact hostnames from DNS/Adblock matching, which covers the listed hostname and its descendants. See its [usage and licensing policy](https://phishing.army/license/).
-- **Schakal:** the full exact-host feed is fetched from `https://schakal.ru/hosts/hosts.txt`, with `https://schakal.hopto.org/hosts.txt` as a fallback host documented in the community forum. The reviewed 4PDA post provides a public URL but no explicit open redistribution license was identified. The source is included by the repository owner's choice as an exact-host supplement, with attribution here; verify the maintainer's terms or obtain permission for public redistribution. This note is not a legal opinion.
+These are user-provided functional exceptions, not a claim that every subdomain of the parent service is safe. Exact exceptions prevent parent tree rules from shadowing them. The Opera Mini glob does not allowlist the whole `opera-mini.net` zone.
 
-Upstream licenses and source contents can change. Re-check upstream terms before changing the source set or distributing a new product/service.
+## Public build gate
+
+Only `approved` and `approved_with_attribution` sources may be enabled in `FAT_SOURCES` or `SLIM_SOURCES`. `permission_required`, `non_commercial_only`, `unknown`, or `blocked` sources must remain outside public profiles until the source owner grants the required rights or terms are verified. The build fails closed if a configured source lacks a license identifier, license URL, attribution, or approved status.
+
+Upstream terms and content can change. Review license metadata and feed freshness periodically, and before adding or replacing any source.

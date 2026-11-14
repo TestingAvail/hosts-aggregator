@@ -13,31 +13,7 @@ import update
 
 
 class ParserSemanticsTests(unittest.TestCase):
-    def test_schakal_has_the_official_host_as_a_fallback(self):
-        source = update.SCHAKAL_SOURCE
-        self.assertEqual(source.url, "https://schakal.ru/hosts/hosts.txt")
-        self.assertEqual(source.fallback_urls, ("https://schakal.hopto.org/hosts.txt",))
-        self.assertEqual(source.default_scope, update.SCOPE_EXACT)
-
-    def test_schakal_download_retries_the_documented_mirror(self):
-        source = update.SCHAKAL_SOURCE
-
-        async def run():
-            semaphore = asyncio.Semaphore(1)
-            fallback_result = (Path("unused-test-source.txt"), 7)
-            with patch.object(
-                update,
-                "_download_source_url",
-                new=AsyncMock(side_effect=[RuntimeError("primary timeout"), fallback_result]),
-            ) as downloader:
-                result = await update.download_source(None, source, semaphore, set())
-            return result, downloader.await_args_list
-
-        result, calls = asyncio.run(run())
-        self.assertEqual(result, (Path("unused-test-source.txt"), 7))
-        self.assertEqual(calls[0].args[4], "https://schakal.ru/hosts/hosts.txt")
-        self.assertEqual(calls[1].args[4], "https://schakal.hopto.org/hosts.txt")
-
+    def test_plain_domain_scope_is_source_declared(self):
     def test_plain_domain_scope_is_source_declared(self):
         self.assertEqual(
             update.parse_source_line("ads.example.test", update.SCOPE_EXACT),
@@ -102,43 +78,58 @@ class ParserSemanticsTests(unittest.TestCase):
         )
 
 
-    def test_production_source_scopes_are_explicit(self):
+    def test_production_sources_have_public_redistribution_metadata(self):
         sources = {source.id: source for source in update.FAT_SOURCES + update.SLIM_SOURCES}
         self.assertEqual(sources["oisd-big"].default_scope, update.SCOPE_TREE)
         self.assertEqual(sources["oisd-small"].default_scope, update.SCOPE_TREE)
-        self.assertEqual(update.SCHAKAL_SOURCE.default_scope, update.SCOPE_EXACT)
-        self.assertIn("schakal-full-hosts", sources)
-        self.assertEqual(sources["schakal-full-hosts"].default_scope, update.SCOPE_EXACT)
-        self.assertIn("/hosts/pro.plus.txt", sources["hagezi-pro-plus-hosts"].url)
-        self.assertIn("/hosts/light.txt", sources["hagezi-light-hosts"].url)
-        self.assertIn("tif.medium-onlydomains.txt", sources["hagezi-tif-medium"].url)
-        self.assertIn("phishing-army-adblock.txt", sources["phishing-army"].url)
-        self.assertEqual(sources["phishing-army"].default_scope, update.SCOPE_TREE)
-        self.assertIn("tif.mini-onlydomains.txt", sources["hagezi-tif-mini"].url)
-        self.assertEqual(sources["hagezi-tif-mini"].default_scope, update.SCOPE_TREE)
+        self.assertEqual(sources["adaway"].license_id, "CC-BY-3.0")
+        self.assertEqual(sources["nocoin"].license_id, "MIT")
+        self.assertEqual(sources["r-a-y-adguard-dns"].license_id, "GPL-3.0")
+        self.assertIn("schakal-full-hosts", set())  # explicit removal marker
+        self.assertNotIn("schakal-full-hosts", sources)
+        self.assertNotIn("goodbyeads", sources)
+        self.assertNotIn("stevenblack-unified", sources)
+        self.assertNotIn("phishing-army", sources)
+        for source in sources.values():
+            with self.subTest(source=source.id):
+                self.assertIn(source.redistribution_status, update.PUBLIC_REDISTRIBUTION_STATUSES)
+                self.assertTrue(source.license_id)
+                self.assertTrue(source.license_url)
+                self.assertTrue(source.attribution)
 
-    def test_phishing_army_hostname_tree_does_not_block_shared_parent(self):
-        self.assertEqual(
-            update.parse_source_line("||phishing.tenant.example^", update.SCOPE_EXACT),
-            [("phishing.tenant.example", update.SCOPE_TREE)],
+    def test_public_source_policy_fails_closed(self):
+        bad = update.Source(
+            "unlicensed", "Unlicensed feed", "https://example.test/list",
+            redistribution_status="permission_required",
         )
-        self.assertEqual(
-            update.parse_source_line("||tenant.example^", update.SCOPE_EXACT),
-            [("tenant.example", update.SCOPE_TREE)],
-        )
+        with self.assertRaisesRegex(RuntimeError, "Public build blocked"):
+            update.validate_public_sources([bad])
+
+    def test_public_source_policy_accepts_configured_sources(self):
+        update.validate_public_sources(update.FAT_SOURCES)
+        update.validate_public_sources(update.SLIM_SOURCES)
 
     def test_manual_legitimate_samples_are_allowed(self):
-        self.assertEqual(update.parse_source_line("www.baihe.com"), [])
-        self.assertEqual(update.parse_source_line("jobs.sciencecareers.org"), [])
-        self.assertEqual(update.parse_source_line("cardlytics.com"), [])
-        # Compatibility exceptions are narrow exact hosts, not blanket trees.
+        hosts = (
+            "www.baihe.com", "jobs.sciencecareers.org", "cardlytics.com",
+            "s.youtube.com", "piwik.opendesktop.org",
+            "hl-img.peco.uodoo.com", "browser.cloud.ucweb.com",
+            "mini50.opera-mini.net",
+        )
+        for host in hosts:
+            with self.subTest(host=host):
+                self.assertEqual(update.parse_source_line(host), [])
+        self.assertEqual(update.parse_source_line("youtube.com", update.SCOPE_TREE), [])
+        self.assertEqual(update.parse_source_line("opendesktop.org", update.SCOPE_TREE), [])
+        self.assertEqual(update.parse_source_line("opera-mini.net", update.SCOPE_TREE), [])
         self.assertEqual(
             update.parse_source_line("tracking.cardlytics.com", update.SCOPE_TREE),
             [("tracking.cardlytics.com", update.SCOPE_TREE)],
         )
-        self.assertEqual(update.parse_source_line("cardlytics.com", update.SCOPE_TREE), [])
-        self.assertEqual(update.parse_source_line("sciencecareers.org", update.SCOPE_TREE), [])
-
+        self.assertEqual(
+            update.parse_source_line("ads.baihe.com", update.SCOPE_TREE),
+            [("ads.baihe.com", update.SCOPE_TREE)],
+        )
 
 class OutputSemanticsTests(unittest.TestCase):
     def setUp(self):
@@ -192,7 +183,7 @@ class OutputSemanticsTests(unittest.TestCase):
                     store = update.DomainStore()
                     input_file = Path(temp_root) / f"{profile}.tsv"
                     input_file.write_text(f"tree\t{domain}\n", encoding="utf-8")
-                    store.add_source_file(source_id, input_file)
+                    store.add_source_file(source_id, input_file, license_id="MIT", attribution="Test feed")
                     profiles.append({
                         "profile": profile, "store": store, "domain_count": store.count(),
                         "source_count": 1, "configured_source_count": 1,
@@ -208,8 +199,8 @@ class OutputSemanticsTests(unittest.TestCase):
                 self.assertGreater(source_map_info["rows"], 0)
                 with gzip.open(Path(temp_root) / "source-map.tsv.gz", "rt", encoding="utf-8") as stream:
                     source_map = stream.read()
-                self.assertIn("FAT\tfeed-fat\tads.example.test\ttree", source_map)
-                self.assertIn("SLIM\tfeed-slim\ttracker.example.test\ttree", source_map)
+                self.assertIn("FAT\tfeed-fat\tads.example.test\ttree\tMIT\tTest feed", source_map)
+                self.assertIn("SLIM\tfeed-slim\ttracker.example.test\ttree\tMIT\tTest feed", source_map)
                 checksum_text = (Path(temp_root) / "SHA256SUMS").read_text(encoding="utf-8")
                 self.assertNotIn("source-map.tsv.gz", checksum_text)
                 for line in checksum_text.splitlines():
