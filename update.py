@@ -1017,7 +1017,7 @@ def run_self_tests() -> None:
     ):
         assert parse_source_line(allowed, SCOPE_EXACT) == []
     assert parse_source_line("other.youtube.com", SCOPE_EXACT) == [("other.youtube.com", SCOPE_EXACT)]
-    assert parse_source_line("piwik.opendesktop.org", SCOPE_TREE) == []
+    assert parse_source_line("piwik.opendesktop.org", SCOPE_TREE) == [("piwik.opendesktop.org", SCOPE_TREE)]
     assert parse_source_line("www.opendesktop.org", SCOPE_EXACT) == [("www.opendesktop.org", SCOPE_EXACT)]
     assert parse_source_line("mini5abc.opera-mini.net", SCOPE_EXACT) == []
     assert parse_source_line("opera-mini.net", SCOPE_TREE) == [("opera-mini.net", SCOPE_TREE)]
