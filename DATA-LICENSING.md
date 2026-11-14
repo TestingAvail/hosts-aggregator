@@ -18,9 +18,9 @@ The builder validates these requirements before downloading sources. Missing rig
 
 - **HaGeZi:** GPL-3.0. See the [main repository](https://github.com/hagezi/dns-blocklists) and [legacy repository](https://github.com/hagezi/dns-blocklists-legacy).
 - **OISD:** GPL-3.0, as stated in the publisher's [FAQ](https://oisd.nl/faq).
-- **AdAway:** CC BY 3.0. Attribute AdAway contributors, link to the source and license, and say the source was normalized and incorporated into an aggregate.
-- **Peter Lowe:** the publisher explicitly permits combining and republishing the list. Preserve the source credit and policy reference.
-- **NoCoin:** MIT. See [Hosh's license](https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE); a copy of the notice is included at [licenses/MIT-Hosh.txt](licenses/MIT-Hosh.txt).
+- **AdAway:** CC BY 3.0. The current feed header names Kicelo and Dominik Schuermann. Attribute them and later contributors, link to the source and license, and say the source was normalized and incorporated into an aggregate. Its last content commit was 2023-04-29, so the build report's unique-contribution metric should be watched.
+- **Peter Lowe:** the publisher's current [main page](https://pgl.yoyo.org/as/) explicitly says: “Feel free to combine this list with yours or lists from other sites and put it up on the web!” Preserve the source credit and policy reference.
+- **NoCoin:** MIT. See [Hosh's license](https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE); a copy of the notice is included at [licenses/MIT-Hosh.txt](licenses/MIT-Hosh.txt). The feed header's data timestamp is 2025-03-05; a 2026-09-12 file commit removed `fastspot.go`, so the feed remains a FAT-only specialist supplement.
 
 ## Provenance and limits
 

@@ -14,15 +14,15 @@ This document describes the feeds currently used by the public FAT and SLIM prof
 | HaGeZi Light legacy hosts | SLIM | hosts / exact | GPL-3.0 | HaGeZi |
 | HaGeZi TIF Mini | SLIM | domains-only / tree | GPL-3.0 | HaGeZi |
 | OISD Small | SLIM | domainswild / tree | GPL-3.0 | OISD |
-| AdAway hosts | FAT, SLIM | hosts / exact | CC BY 3.0 | AdAway contributors |
+| AdAway hosts | FAT, SLIM | hosts / exact | CC BY 3.0 | Kicelo, Dominik Schuermann and subsequent contributors |
 | Peter Lowe Ad and Tracking Server List | FAT, SLIM | hosts / exact | Explicit publisher permission to combine and republish | Peter Lowe |
 | NoCoin hosts | FAT | hosts / exact | MIT | Hosh |
 
 ## Why these direct feeds
 
-- **AdAway:** its upstream hosts file declares CC Attribution 3.0. The build credits AdAway, links the license, and identifies the data as normalized and incorporated into an aggregate.
-- **Peter Lowe:** the publisher explicitly says users may combine the list with other lists and publish the result on the web. The build retains the publisher credit and policy link.
-- **NoCoin:** the upstream repository contains an MIT license and a hosts-specific output. Its hosts file currently reports last modified 2025-03-05, so it is included only in FAT as a small specialized supplement and should be watched for staleness. Hosh's copyright and permission notice are included in `licenses/MIT-Hosh.txt`.
+- **AdAway:** its upstream hosts file declares CC Attribution 3.0 and names Kicelo and Dominik Schuermann. Its hosts.txt content last changed on 2023-04-29; the build preserves author/source/license attribution and identifies normalization and inclusion in an aggregate. Its actual incremental value is visible in the per-source build report, so it can be removed if the feed becomes stale without adding useful coverage.
+- **Peter Lowe:** the publisher explicitly permits combining the list with other lists and publishing the result on the web (see the current [publisher page](https://pgl.yoyo.org/as/), under “submit a hostname for the list”). The build retains the publisher credit and policy link.
+- **NoCoin:** the upstream repository contains an MIT license and a hosts-specific output. The file header reports last modified 2025-03-05, while its file history shows a 2026-09-12 change removing `fastspot.go`; it remains FAT-only as a small specialized supplement. Hosh's copyright and permission notice are included in `licenses/MIT-Hosh.txt`.
 - **HaGeZi:** the primary and legacy repositories each include GPL-3.0.
 - **OISD:** the official FAQ states that OISD lists are distributed under GNU GPL version 3.
 

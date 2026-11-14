@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import json
 import tempfile
 import unittest
 from io import StringIO
@@ -88,10 +89,42 @@ class ParserSemanticsTests(unittest.TestCase):
         self.assertEqual(sources["adaway"].default_scope, update.SCOPE_EXACT)
         self.assertEqual(sources["peter-lowe"].default_scope, update.SCOPE_EXACT)
         self.assertEqual(sources["nocoin"].default_scope, update.SCOPE_EXACT)
+        self.assertEqual(sources["hagezi-pro-plus-wildcard"].input_format, "domains-only")
+        self.assertEqual(sources["oisd-big"].input_format, "domainswild")
+        self.assertEqual(sources["adaway"].input_format, "hosts")
+        self.assertIn("Kicelo and Dominik Schuermann", policies["adaway"]["attribution"])
+        self.assertIn("pgl.yoyo.org/as/", policies["peter-lowe"]["license"]["url"])
         self.assertIn("/hosts/pro.plus.txt", sources["hagezi-pro-plus-hosts"].url)
         self.assertIn("/hosts/light.txt", sources["hagezi-light-hosts"].url)
         self.assertIn("tif.medium-onlydomains.txt", sources["hagezi-tif-medium"].url)
         self.assertIn("tif.mini-onlydomains.txt", sources["hagezi-tif-mini"].url)
+
+    def test_source_registry_fails_closed_on_format_drift(self):
+        registry = update.load_source_registry()
+        registry["active_sources"][0]["format"] = "hosts"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "sources.json"
+            path.write_text(json.dumps(registry), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "format mismatch"):
+                update.validate_public_source_policy(path=path)
+
+    def test_source_registry_fails_closed_without_redistribution_basis(self):
+        registry = update.load_source_registry()
+        registry["active_sources"][0]["redistribution"].pop("basis")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "sources.json"
+            path.write_text(json.dumps(registry), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "no redistribution basis"):
+                update.validate_public_source_policy(path=path)
+
+    def test_source_registry_must_enable_fail_closed(self):
+        registry = update.load_source_registry()
+        registry["policy"]["fail_closed"] = False
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "sources.json"
+            path.write_text(json.dumps(registry), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "fail_closed"):
+                update.validate_public_source_policy(path=path)
 
     def test_public_source_policy_fails_closed_on_unknown_feed(self):
         bad_profiles = {
@@ -214,7 +247,8 @@ class OutputSemanticsTests(unittest.TestCase):
         self.store.add_source_file("adaway", manual_path)
         hosts = StringIO()
         update.write_hosts(self.store, hosts, "TEST")
-        self.assertIn("AdAway contributors", hosts.getvalue())
+        self.assertIn("Kicelo and Dominik Schuermann", hosts.getvalue())
+        self.assertIn("CC BY 3.0", hosts.getvalue())
         self.assertNotIn("NoCoin", hosts.getvalue())
 
     def test_atomic_generation_writes_report_source_map_and_valid_checksums(self):

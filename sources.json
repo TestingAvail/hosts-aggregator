@@ -99,10 +99,14 @@
         "id": "CC-BY-3.0",
         "url": "https://creativecommons.org/licenses/by/3.0/"
       },
-      "attribution": "AdAway contributors — https://github.com/AdAway/adaway.github.io",
+      "attribution": "Kicelo and Dominik Schuermann (AdAway default blocklist), plus subsequent contributors — https://github.com/AdAway/adaway.github.io",
       "redistribution": {
         "status": "approved_with_attribution",
-        "basis": "The upstream hosts file declares CC BY 3.0. Preserve attribution and the license link; identify the data as normalized and incorporated into an aggregate."
+        "basis": "The upstream hosts file declares CC BY 3.0. Attribute the named authors, link to the source and license, and identify normalization and inclusion in an aggregate."
+      },
+      "quality": {
+        "note": "The hosts.txt content last changed on 2023-04-29. Keep in the active profiles only while its measured unique contribution justifies retaining a stale feed.",
+        "last_upstream_content_commit": "2023-04-29"
       }
     },
     {
@@ -122,7 +126,7 @@
       "attribution": "Peter Lowe — pgl@yoyo.org — https://pgl.yoyo.org/",
       "redistribution": {
         "status": "approved_with_attribution",
-        "basis": "The publisher explicitly says users may combine this list with other lists and publish the result on the web. Preserve the publisher credit and link to the policy."
+        "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
       }
     },
     {
@@ -144,8 +148,9 @@
         "basis": "The upstream repository contains an MIT license. Preserve the copyright and permission notice, included as licenses/MIT-Hosh.txt."
       },
       "quality": {
-        "note": "The hosts.txt header reports last modified 2025-03-05. Included only in FAT as a small, specialized legacy feed; monitor for fresh data and false positives.",
-        "last_upstream_data_date": "2025-03-05"
+        "note": "The hosts.txt header reports last modified 2025-03-05. The file also had a 2026-09-12 commit removing fastspot.go; keep FAT-only as a small specialized supplement and monitor current data freshness and false positives.",
+        "last_upstream_data_date": "2025-03-05",
+        "last_upstream_file_commit": "2026-09-12"
       }
     },
     {

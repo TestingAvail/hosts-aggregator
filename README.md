@@ -35,9 +35,9 @@ A high-coverage profile for routers with sufficient memory/CPU:
 - HaGeZi Pro++ legacy hosts expansion for known subdomains in the hosts output.
 - HaGeZi TIF Medium threat-intelligence companion.
 - OISD Big in its `domainswild` format.
-- AdAway hosts for mobile ads and analytics.
-- Peter Lowe's Ad and Tracking Server List.
-- NoCoin hosts for browser-based cryptomining (FAT only; the upstream file reports a 2025-03-05 data timestamp).
+- AdAway hosts for mobile ads and analytics (CC BY 3.0; last content change 2023-04-29, retained only while its unique contribution justifies it).
+- Peter Lowe's Ad and Tracking Server List (the publisher explicitly permits combining and republishing).
+- NoCoin hosts for browser-based cryptomining (FAT only; header data timestamp 2025-03-05, with a 2026-09-12 file change removing one entry).
 
 FAT is intentionally aggressive and memory-heavier. TIF Medium is substantially larger than TIF Mini. Use it only on higher-capacity routers; for AdGuard Home, HaGeZi notes that TIF Medium needs at least 1 GB RAM. It can still block legitimate or dual-use services, so test it on a subset of devices.
 
@@ -51,9 +51,8 @@ A smaller compatibility-oriented profile:
 - OISD Small in its `domainswild` format.
 - AdAway hosts.
 - Peter Lowe's Ad and Tracking Server List.
-- NoCoin hosts.
 
-OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM keeps the smaller HaGeZi Light tier and TIF Mini while sharing the three direct supplemental feeds above.
+OISD Big and Small are not combined in one profile: Big is the larger alternative, not an extra layer over Small. SLIM keeps the smaller HaGeZi Light tier and TIF Mini while sharing the two direct supplemental feeds above. NoCoin stays FAT-only because its upstream data timestamp is older.
 
 ## Important rule semantics
 

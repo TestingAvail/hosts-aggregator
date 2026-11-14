@@ -61,6 +61,7 @@ class Source:
     purpose: str = "general"
     notes: str = ""
     fallback_urls: tuple[str, ...] = ()
+    input_format: str = "hosts"
 
 
 HAGEZI_MAIN = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest"
@@ -73,6 +74,7 @@ FAT_SOURCES = [
         "hagezi-pro-plus-wildcard", "HaGeZi Pro++ (wildcard domains)",
         f"{HAGEZI_MAIN}/wildcard/pro.plus-onlydomains.txt",
         SCOPE_TREE, True, "ads-trackers-telemetry", "Primary aggressive DNS tier; wildcard semantics retained for AdGuard.",
+        input_format="domains-only",
     ),
     Source(
         "hagezi-pro-plus-hosts", "HaGeZi Pro++ (legacy hosts expansion)",
@@ -83,10 +85,12 @@ FAT_SOURCES = [
         "hagezi-tif-medium", "HaGeZi TIF Medium",
         f"{HAGEZI_MAIN}/wildcard/tif.medium-onlydomains.txt",
         SCOPE_TREE, False, "threat-intelligence", "Larger threat feed companion for the FAT/high-capacity profile; not a replacement for the main tier.",
+        input_format="domains-only",
     ),
     Source(
         "oisd-big", "OISD Big (domainswild)", "https://big.oisd.nl/domainswild",
         SCOPE_TREE, False, "ads-trackers-malware", "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
+        input_format="domainswild",
     ),
     Source(
         "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
@@ -109,6 +113,7 @@ SLIM_SOURCES = [
         "hagezi-light-wildcard", "HaGeZi Light (wildcard domains)",
         f"{HAGEZI_MAIN}/wildcard/light-onlydomains.txt",
         SCOPE_TREE, True, "ads-trackers", "Compatibility-oriented primary tier.",
+        input_format="domains-only",
     ),
     Source(
         "hagezi-light-hosts", "HaGeZi Light (legacy hosts expansion)",
@@ -119,10 +124,12 @@ SLIM_SOURCES = [
         "hagezi-tif-mini", "HaGeZi TIF Mini",
         f"{HAGEZI_MAIN}/wildcard/tif.mini-onlydomains.txt",
         SCOPE_TREE, False, "threat-intelligence", "Smaller threat-intelligence companion for resource-constrained profiles.",
+        input_format="domains-only",
     ),
     Source(
         "oisd-small", "OISD Small (domainswild)", "https://small.oisd.nl/domainswild",
         SCOPE_TREE, False, "ads", "Small wildcard-domain list; Big and Small are alternatives, not layers.",
+        input_format="domainswild",
     ),
     Source(
         "adaway", "AdAway hosts", "https://adaway.org/hosts.txt",
@@ -161,6 +168,9 @@ def validate_public_source_policy(
     """Fail closed if a public profile contains a feed without a documented redistribution basis."""
     configured_profiles = profiles or PROFILE_SOURCES
     registry = load_source_registry(path)
+    if registry.get("policy", {}).get("fail_closed") is not True:
+        raise RuntimeError("sources.json policy must explicitly enable fail_closed")
+
     active_records = registry.get("active_sources", [])
     active = {item.get("id"): item for item in active_records if item.get("id")}
     if len(active) != len(active_records):
@@ -199,12 +209,18 @@ def validate_public_source_policy(
             raise RuntimeError(f"source URL mismatch between update.py and sources.json for {source_id}")
         if record.get("scope") != source.default_scope:
             raise RuntimeError(f"source scope mismatch between update.py and sources.json for {source_id}")
+        if record.get("format") != source.input_format:
+            raise RuntimeError(f"source format mismatch between update.py and sources.json for {source_id}")
         if set(record.get("profiles", [])) != configured[source_id]:
             raise RuntimeError(f"source profile mismatch between update.py and sources.json for {source_id}")
         if not license_info.get("id") or not license_info.get("url"):
             raise RuntimeError(f"source {source_id} has no license/permission reference")
+        if not str(license_info.get("url", "")).startswith("https://"):
+            raise RuntimeError(f"source {source_id} license/permission reference must use HTTPS")
         if not record.get("attribution"):
             raise RuntimeError(f"source {source_id} has no attribution statement")
+        if not redistribution.get("basis"):
+            raise RuntimeError(f"source {source_id} has no redistribution basis")
         if not source.url.startswith("https://"):
             raise RuntimeError(f"source {source_id} must use HTTPS")
     return active
@@ -1071,8 +1087,8 @@ SOURCE_NOTICES = {
     "hagezi-tif-mini": "HaGeZi — GPL-3.0; https://github.com/hagezi/dns-blocklists",
     "oisd-big": "OISD — GPL-3.0; https://oisd.nl/faq",
     "oisd-small": "OISD — GPL-3.0; https://oisd.nl/faq",
-    "adaway": "AdAway contributors — CC BY 3.0; normalized and included in this aggregate; https://creativecommons.org/licenses/by/3.0/",
-    "peter-lowe": "Peter Lowe — publisher permits combining and republishing; https://pgl.yoyo.org/as/index.php",
+    "adaway": "AdAway default blocklist — Kicelo and Dominik Schuermann plus subsequent contributors; CC BY 3.0; normalized and included in this aggregate; https://adaway.org/hosts.txt; https://creativecommons.org/licenses/by/3.0/",
+    "peter-lowe": "Peter Lowe — explicit permission to combine and republish; https://pgl.yoyo.org/as/; https://pgl.yoyo.org/adservers/policy.php",
     "nocoin": "NoCoin — Copyright (c) 2017 Hosh, MIT; https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE",
 }
 
