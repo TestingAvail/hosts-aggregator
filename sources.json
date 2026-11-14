@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "approved_redistribution_statuses": [
+      "approved",
+      "approved_with_attribution"
+    ],
+    "fail_closed": true,
+    "notes": "A public feed requires a documented license or explicit publisher permission, attribution, stable source URL, and matching code configuration."
+  },
+  "active_sources": [
+    {
+      "id": "hagezi-pro-plus-wildcard",
+      "name": "HaGeZi Pro++ wildcard domains",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.plus-onlydomains.txt",
+      "profiles": [
+        "FAT"
+      ],
+      "format": "domains-only",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "hagezi-pro-plus-hosts",
+      "name": "HaGeZi Pro++ legacy hosts expansion",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/pro.plus.txt",
+      "profiles": [
+        "FAT"
+      ],
+      "format": "hosts",
+      "scope": "exact",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists-legacy/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists-legacy",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "hagezi-tif-medium",
+      "name": "HaGeZi TIF Medium",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.medium-onlydomains.txt",
+      "profiles": [
+        "FAT"
+      ],
+      "format": "domains-only",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "oisd-big",
+      "name": "OISD Big",
+      "url": "https://big.oisd.nl/domainswild",
+      "profiles": [
+        "FAT"
+      ],
+      "format": "domainswild",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://oisd.nl/faq"
+      },
+      "attribution": "OISD — https://oisd.nl",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
+      }
+    },
+    {
+      "id": "adaway",
+      "name": "AdAway hosts",
+      "url": "https://adaway.org/hosts.txt",
+      "profiles": [
+        "FAT",
+        "SLIM"
+      ],
+      "format": "hosts",
+      "scope": "exact",
+      "license": {
+        "id": "CC-BY-3.0",
+        "url": "https://creativecommons.org/licenses/by/3.0/"
+      },
+      "attribution": "Kicelo and Dominik Schuermann (AdAway default blocklist), plus subsequent contributors — https://github.com/AdAway/adaway.github.io",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream hosts file declares CC BY 3.0. Attribute the named authors, link to the source and license, and identify normalization and inclusion in an aggregate."
+      },
+      "quality": {
+        "note": "The hosts.txt content last changed on 2023-04-29. Keep in the active profiles only while its measured unique contribution justifies retaining a stale feed.",
+        "last_upstream_content_commit": "2023-04-29"
+      }
+    },
+    {
+      "id": "peter-lowe",
+      "name": "Peter Lowe's Ad and Tracking Server List",
+      "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext&useip=0.0.0.0",
+      "profiles": [
+        "FAT",
+        "SLIM"
+      ],
+      "format": "hosts",
+      "scope": "exact",
+      "license": {
+        "id": "Publisher permission statement (non-SPDX)",
+        "url": "https://pgl.yoyo.org/as/index.php"
+      },
+      "attribution": "Peter Lowe — pgl@yoyo.org — https://pgl.yoyo.org/",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
+      }
+    },
+    {
+      "id": "nocoin",
+      "name": "NoCoin hosts",
+      "url": "https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt",
+      "profiles": [
+        "FAT"
+      ],
+      "format": "hosts",
+      "scope": "exact",
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/hoshsadiq/adblock-nocoin-list/blob/master/LICENSE"
+      },
+      "attribution": "Hosh (2017) — https://github.com/hoshsadiq/adblock-nocoin-list",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream repository contains an MIT license. Preserve the copyright and permission notice, included as licenses/MIT-Hosh.txt."
+      },
+      "quality": {
+        "note": "The hosts.txt header reports last modified 2025-03-05. The file also had a 2026-09-12 commit removing fastspot.go; keep FAT-only as a small specialized supplement and monitor current data freshness and false positives.",
+        "last_upstream_data_date": "2025-03-05",
+        "last_upstream_file_commit": "2026-09-12"
+      }
+    },
+    {
+      "id": "hagezi-light-wildcard",
+      "name": "HaGeZi Light wildcard domains",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/light-onlydomains.txt",
+      "profiles": [
+        "SLIM"
+      ],
+      "format": "domains-only",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "hagezi-light-hosts",
+      "name": "HaGeZi Light legacy hosts expansion",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists-legacy@latest/hosts/light.txt",
+      "profiles": [
+        "SLIM"
+      ],
+      "format": "hosts",
+      "scope": "exact",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists-legacy/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists-legacy",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "hagezi-tif-mini",
+      "name": "HaGeZi TIF Mini",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/tif.mini-onlydomains.txt",
+      "profiles": [
+        "SLIM"
+      ],
+      "format": "domains-only",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://github.com/hagezi/dns-blocklists/blob/main/LICENSE"
+      },
+      "attribution": "HaGeZi — https://github.com/hagezi/dns-blocklists",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
+      }
+    },
+    {
+      "id": "oisd-small",
+      "name": "OISD Small",
+      "url": "https://small.oisd.nl/domainswild",
+      "profiles": [
+        "SLIM"
+      ],
+      "format": "domainswild",
+      "scope": "tree",
+      "license": {
+        "id": "GPL-3.0",
+        "url": "https://oisd.nl/faq"
+      },
+      "attribution": "OISD — https://oisd.nl",
+      "redistribution": {
+        "status": "approved_with_attribution",
+        "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
+      }
+    }
+  ],
+  "excluded_or_pending": [
+    {
+      "id": "schakal-full-hosts",
+      "name": "Schakal full hosts",
+      "reference": "https://schakal.ru/hosts/hosts.txt",
+      "status": "permission_required",
+      "reason": "The supplied 4PDA post and public URL do not establish an open redistribution license. Excluded from public builds unless explicit permission or an applicable license is confirmed."
+    },
+    {
+      "id": "goodbyeads",
+      "name": "GoodbyeAds aggregate",
+      "reference": "https://github.com/jerryn70/GoodbyeAds",
+      "status": "upstream_rights_review_required",
+      "reason": "Its source catalogue lists components with differing terms, including non-commercial, no-license and all-rights-reserved entries. The aggregate repository's MIT code license is not blanket permission for included data."
+    },
+    {
+      "id": "phishing-army",
+      "name": "Phishing Army",
+      "reference": "https://phishing.army/license/",
+      "status": "upstream_rights_review_required",
+      "reason": "The publisher warns that rights from independent upstream intelligence providers are not automatically sublicensed."
+    },
+    {
+      "id": "stevenblack-unified",
+      "name": "StevenBlack Unified",
+      "reference": "https://github.com/StevenBlack/hosts",
+      "status": "upstream_composition_review_required",
+      "reason": "A downstream aggregator with multiple components (including AdAway, MVPS, MalwareDomainList and someonewhocares). Prefer direct sources after individual license review."
+    },
+    {
+      "id": "dan-pollock",
+      "name": "Dan Pollock's hosts file",
+      "reference": "https://someonewhocares.org/hosts/zero/hosts",
+      "status": "retired_or_unreachable",
+      "reason": "Reported unavailable in the supplied source inventory; excluded."
+    },
+    {
+      "id": "malware-domain-list",
+      "name": "Malware Domain List hosts",
+      "reference": "http://www.malwaredomainlist.com/hostslist/hosts.txt",
+      "status": "retired_or_stale",
+      "reason": "Reported stale or unavailable in the supplied source inventory; excluded."
+    },
+    {
+      "id": "hphosts",
+      "name": "hpHosts ad servers",
+      "reference": "http://hosts-file.net/ad_servers.txt",
+      "status": "retired",
+      "reason": "Reported discontinued by its author in 2020; excluded."
+    },
+    {
+      "id": "energized-spark",
+      "name": "Energized Spark Protection",
+      "reference": "https://raw.githubusercontent.com/EnergizedProtection/block/master/spark/formats/hosts.txt",
+      "status": "excluded_quality",
+      "reason": "Previously excluded for excessive false positives; excluded."
+    },
+    {
+      "id": "adguarddns-mobile-hosts",
+      "name": "AdGuard DNS conversion by r-a-y",
+      "reference": "https://github.com/r-a-y/mobile-hosts",
+      "status": "upstream_composition_review_required",
+      "reason": "The repository is GPL-3.0, but the converted file combines AdGuard, EasyList/EasyPrivacy and other upstream inputs. Map and comply with all upstream notices before importing."
+    },
+    {
+      "id": "vladik2000-youtube",
+      "name": "VLADIK2000 YouTube list",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=92500131",
+      "status": "excluded_by_upstream_curator",
+      "reason": "The entry is struck through in the supplied Schakal source inventory; it is not included."
+    },
+    {
+      "id": "exodus-mimikatze",
+      "name": "Exodus tracker list by MimiKatze",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=88755109",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "xiaomi-mimikatze",
+      "name": "Xiaomi telemetry list by MimiKatze",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89667643",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "nasgern-hosts",
+      "name": "Hosts list by nasgern",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89709018",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "nasgern-pihole",
+      "name": "Pi-hole list by nasgern",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=89779555",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "raletag",
+      "name": "List by raletag (2019)",
+      "reference": "https://4pda.to/forum/index.php?showtopic=275091&view=findpost&p=62522395",
+      "status": "permission_required",
+      "reason": "Old user-contributed list; current content, maintainer, provenance and redistribution terms need verification."
+    },
+    {
+      "id": "russianrice",
+      "name": "Visitor-IP tracking list by RussianRice",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=98500074",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "flyme-anton29000",
+      "name": "Flyme list by Anton29000",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=97669523",
+      "status": "permission_required",
+      "reason": "User-contributed list; no stable feed license or public redistribution permission established."
+    },
+    {
+      "id": "schakal-own-findings",
+      "name": "Schakal's own findings",
+      "reference": "https://4pda.to/forum/index.php?s=&showtopic=275091&view=findpost&p=98664750",
+      "status": "permission_required",
+      "reason": "No separate open redistribution grant for the collected data was established."
+    }
+  ]
+}
