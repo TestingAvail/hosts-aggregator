@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "builder_version": "4.3.0",
-  "generated_at_utc": "2026-11-16T22:17:45Z",
+  "generated_at_utc": "2026-11-17T21:04:06Z",
   "semantics": {
     "hosts": "Exact hostnames only; legacy expanded feeds enumerate known subdomains, unknown/dynamic subdomains cannot be represented.",
     "adguard": "ABP ||domain^ rules retain domain-tree scope; bare domain rules retain exact-host scope.",
@@ -22,16 +22,16 @@
   "profiles": [
     {
       "name": "FAT",
-      "domain_count": 908177,
+      "domain_count": 908567,
       "rule_counts": {
-        "exact": 322155,
-        "tree": 586022
+        "exact": 326032,
+        "tree": 582535
       },
       "source_count": 7,
       "configured_source_count": 7,
       "failed_source_count": 0,
-      "overlap_domain_count": 358581,
-      "duration_seconds": 69.62,
+      "overlap_domain_count": 361684,
+      "duration_seconds": 69.83,
       "sources": [
         {
           "id": "hagezi-pro-plus-wildcard",
@@ -51,13 +51,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 263510,
-          "unique_domains": 263510,
+          "accepted_rules_in_feed": 266423,
+          "unique_domains": 266423,
           "exclusive_domains": 0,
           "exact_domains": 0,
-          "tree_domains": 263510,
+          "tree_domains": 266423,
           "notes": "Primary aggressive DNS tier; wildcard semantics retained for AdGuard.",
-          "last_success_utc": "2026-11-16T22:17:06Z",
+          "last_success_utc": "2026-11-17T21:03:40Z",
           "cache_age_days": 0
         },
         {
@@ -78,13 +78,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 588498,
-          "unique_domains": 588498,
-          "exclusive_domains": 317728,
-          "exact_domains": 588469,
+          "accepted_rules_in_feed": 595387,
+          "unique_domains": 595387,
+          "exclusive_domains": 321606,
+          "exact_domains": 595358,
           "tree_domains": 29,
           "notes": "Enumerated known hostnames for hosts consumers; cannot cover unknown dynamic subdomains.",
-          "last_success_utc": "2026-11-16T22:17:26Z",
+          "last_success_utc": "2026-11-17T21:03:46Z",
           "cache_age_days": 0
         },
         {
@@ -105,13 +105,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 353200,
-          "unique_domains": 353200,
-          "exclusive_domains": 188548,
+          "accepted_rules_in_feed": 347213,
+          "unique_domains": 347213,
+          "exclusive_domains": 182120,
           "exact_domains": 0,
-          "tree_domains": 353200,
+          "tree_domains": 347213,
           "notes": "Larger threat feed companion for the FAT/high-capacity profile; not a replacement for the main tier.",
-          "last_success_utc": "2026-11-16T22:17:18Z",
+          "last_success_utc": "2026-11-17T21:03:41Z",
           "cache_age_days": 0
         },
         {
@@ -132,13 +132,13 @@
             "status": "approved_with_attribution",
             "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
           },
-          "accepted_rules_in_feed": 228721,
-          "unique_domains": 228721,
-          "exclusive_domains": 41827,
+          "accepted_rules_in_feed": 228873,
+          "unique_domains": 228873,
+          "exclusive_domains": 41665,
           "exact_domains": 0,
-          "tree_domains": 228721,
+          "tree_domains": 228873,
           "notes": "Official wildcard-domain form; covers unknown subdomains in AdGuard output.",
-          "last_success_utc": "2026-11-16T22:17:20Z",
+          "last_success_utc": "2026-11-17T21:03:42Z",
           "cache_age_days": 0
         },
         {
@@ -161,11 +161,11 @@
           },
           "accepted_rules_in_feed": 6537,
           "unique_domains": 6537,
-          "exclusive_domains": 1085,
+          "exclusive_domains": 1084,
           "exact_domains": 6528,
           "tree_domains": 9,
           "notes": "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
-          "last_success_utc": "2026-11-16T22:16:53Z",
+          "last_success_utc": "2026-11-17T21:03:11Z",
           "cache_age_days": 0
         },
         {
@@ -186,13 +186,13 @@
             "status": "approved_with_attribution",
             "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
           },
-          "accepted_rules_in_feed": 3555,
-          "unique_domains": 3555,
+          "accepted_rules_in_feed": 3556,
+          "unique_domains": 3556,
           "exclusive_domains": 225,
-          "exact_domains": 3544,
+          "exact_domains": 3545,
           "tree_domains": 11,
           "notes": "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
-          "last_success_utc": "2026-11-16T22:16:40Z",
+          "last_success_utc": "2026-11-17T21:03:07Z",
           "cache_age_days": 0
         },
         {
@@ -219,7 +219,7 @@
           "exact_domains": 312,
           "tree_domains": 0,
           "notes": "MIT-licensed hosts feed; preserve Hosh's copyright/license notice in project attribution.",
-          "last_success_utc": "2026-11-16T22:16:29Z",
+          "last_success_utc": "2026-11-17T21:02:50Z",
           "cache_age_days": 0
         }
       ],
@@ -230,16 +230,16 @@
     },
     {
       "name": "SLIM",
-      "domain_count": 362605,
+      "domain_count": 361824,
       "rule_counts": {
-        "exact": 74974,
-        "tree": 287631
+        "exact": 74905,
+        "tree": 286919
       },
       "source_count": 6,
       "configured_source_count": 6,
       "failed_source_count": 0,
-      "overlap_domain_count": 111836,
-      "duration_seconds": 42.56,
+      "overlap_domain_count": 112516,
+      "duration_seconds": 43.42,
       "sources": [
         {
           "id": "hagezi-light-wildcard",
@@ -259,13 +259,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 92151,
-          "unique_domains": 92151,
+          "accepted_rules_in_feed": 92845,
+          "unique_domains": 92845,
           "exclusive_domains": 1,
           "exact_domains": 0,
-          "tree_domains": 92151,
+          "tree_domains": 92845,
           "notes": "Compatibility-oriented primary tier.",
-          "last_success_utc": "2026-11-16T22:16:47Z",
+          "last_success_utc": "2026-11-17T21:03:05Z",
           "cache_age_days": 0
         },
         {
@@ -286,13 +286,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream legacy repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 163389,
-          "unique_domains": 163389,
-          "exclusive_domains": 69219,
-          "exact_domains": 163377,
+          "accepted_rules_in_feed": 164010,
+          "unique_domains": 164010,
+          "exclusive_domains": 69152,
+          "exact_domains": 163998,
           "tree_domains": 12,
           "notes": "Enumerated known hostnames for hosts consumers.",
-          "last_success_utc": "2026-11-16T22:16:56Z",
+          "last_success_utc": "2026-11-17T21:03:22Z",
           "cache_age_days": 0
         },
         {
@@ -313,13 +313,13 @@
             "status": "approved_with_attribution",
             "basis": "The upstream repository publishes the list under GPL-3.0; preserve the license and attribution."
           },
-          "accepted_rules_in_feed": 182645,
-          "unique_domains": 182645,
-          "exclusive_domains": 150843,
+          "accepted_rules_in_feed": 182365,
+          "unique_domains": 182365,
+          "exclusive_domains": 150221,
           "exact_domains": 0,
-          "tree_domains": 182645,
+          "tree_domains": 182365,
           "notes": "Smaller threat-intelligence companion for resource-constrained profiles.",
-          "last_success_utc": "2026-11-16T22:17:00Z",
+          "last_success_utc": "2026-11-17T21:03:23Z",
           "cache_age_days": 0
         },
         {
@@ -340,13 +340,13 @@
             "status": "approved_with_attribution",
             "basis": "The publisher's FAQ states that OISD lists are distributed under GNU GPL version 3."
           },
-          "accepted_rules_in_feed": 63263,
-          "unique_domains": 63263,
-          "exclusive_domains": 26585,
+          "accepted_rules_in_feed": 62566,
+          "unique_domains": 62566,
+          "exclusive_domains": 25804,
           "exact_domains": 0,
-          "tree_domains": 63263,
+          "tree_domains": 62566,
           "notes": "Small wildcard-domain list; Big and Small are alternatives, not layers.",
-          "last_success_utc": "2026-11-16T22:17:03Z",
+          "last_success_utc": "2026-11-17T21:03:20Z",
           "cache_age_days": 0
         },
         {
@@ -369,11 +369,11 @@
           },
           "accepted_rules_in_feed": 6537,
           "unique_domains": 6537,
-          "exclusive_domains": 3019,
+          "exclusive_domains": 3027,
           "exact_domains": 6528,
           "tree_domains": 9,
           "notes": "CC BY 3.0; retain AdAway attribution and indicate aggregation/normalization.",
-          "last_success_utc": "2026-11-16T22:16:53Z",
+          "last_success_utc": "2026-11-17T21:03:11Z",
           "cache_age_days": 0
         },
         {
@@ -394,13 +394,13 @@
             "status": "approved_with_attribution",
             "basis": "The publisher's current page expressly permits combining this list with other lists and publishing the result on the web. Preserve the publisher credit and link to the policy."
           },
-          "accepted_rules_in_feed": 3555,
-          "unique_domains": 3555,
-          "exclusive_domains": 1081,
-          "exact_domains": 3544,
+          "accepted_rules_in_feed": 3556,
+          "unique_domains": 3556,
+          "exclusive_domains": 1082,
+          "exact_domains": 3545,
           "tree_domains": 11,
           "notes": "Publisher explicitly permits combining this list with other lists and publishing the result; retain attribution.",
-          "last_success_utc": "2026-11-16T22:16:40Z",
+          "last_success_utc": "2026-11-17T21:03:07Z",
           "cache_age_days": 0
         }
       ],
@@ -412,33 +412,33 @@
   ],
   "outputs": {
     "hosts.txt": {
-      "entries": 908176,
-      "bytes": 28731037,
-      "sha256": "fd2f5bb1fc1d727d95516b6d1eebfa13e07126abc0407386e8fa0af48467cf95",
+      "entries": 908566,
+      "bytes": 28712883,
+      "sha256": "eb88760915d49fdd7841651573b863c8b2581bf194049dbb01fca97d2adc351c",
       "format": "hosts; exact hostnames (compatibility exceptions omitted)"
     },
     "abp.txt": {
-      "rules": 576176,
-      "bytes": 12958536,
-      "sha256": "a9de3f45ad4d5909e33dee503cea98bc107667f1323f9ca6dd02537267c77886",
+      "rules": 572769,
+      "bytes": 12850577,
+      "sha256": "3ca601d4ab5d9633c59c7b6bcc2e71260ee30b7b13ff6634a3cb40b371299371",
       "format": "AdGuard DNS exact + domain-tree rules"
     },
     "hosts-slim.txt": {
-      "entries": 362604,
-      "bytes": 10755928,
-      "sha256": "f6a2f849894a6b2cabab2c19d2cb4b593d120f66369c6573f8c6dda915b8c5dd",
+      "entries": 361823,
+      "bytes": 10732615,
+      "sha256": "548ebb6cf68df846507d1501e36ca151f16c033f64dcb2575267b1ab44c68695",
       "format": "hosts; exact hostnames (compatibility exceptions omitted)"
     },
     "abp-slim.txt": {
-      "rules": 287400,
-      "bytes": 6418045,
-      "sha256": "ddb8331afbfd54ef678624c09f38d8b7fe61b66d4d3cab8cdbc9713039753544",
+      "rules": 286685,
+      "bytes": 6403591,
+      "sha256": "4ef6611fc9e92f102a1f7c98a2959bbd9ceb16e180006c048aab9bfda5893f13",
       "format": "AdGuard DNS exact + domain-tree rules"
     },
     "source-map.tsv.gz": {
-      "rows": 1955873,
-      "bytes": 15785440,
-      "sha256": "9ea7bd12be197ee9d7a864aef33d00dc49275c798146fbec04029de3af98cf9a",
+      "rows": 1960180,
+      "bytes": 15826241,
+      "sha256": "fd8e2c9f44a69205f3fde05beea7914958f5550d01d89756d1e0ef7106ecd976",
       "format": "gzip TSV: profile, source_id, domain, scope"
     }
   }
